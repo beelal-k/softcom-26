@@ -249,6 +249,7 @@ function ChatMessage({
               <span className='animate-bounce delay-100 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '150ms' }}></span>
               <span className='animate-bounce delay-200 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '300ms' }}></span>
             </div>
+            <span className='text-sm text-muted-foreground'>Thinking...</span>
           </div>
         ) : (
           <p className='whitespace-pre-wrap text-sm leading-relaxed'>{content}</p>
