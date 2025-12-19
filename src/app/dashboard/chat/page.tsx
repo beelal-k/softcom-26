@@ -6,6 +6,17 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { 
+  initializeSocket,
+  joinRoom,
+  sendChatMessage,
+  onResponse,
+  onStatus,
+  onConnect,
+  onDisconnect,
+  onConnectionError,
+  disconnectSocket
+} from '@/lib/socket';
 import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare } from 'lucide-react';
 import { useEffect, useRef, useState, FormEvent } from 'react';
 
@@ -20,10 +31,56 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     setMounted(true);
+    
+    // Initialize socket connection
+    const initSocket = async () => {
+      const socket = await initializeSocket();
+
+      // Setup event listeners
+      onConnect(() => {
+        console.log('✅ Connected to AI server');
+        setIsConnected(true);
+        joinRoom(); // Join default user room
+      });
+
+      onDisconnect(() => {
+        console.log('❌ Disconnected from AI server');
+        setIsConnected(false);
+      });
+
+      onConnectionError((error) => {
+        console.error('Connection error:', error);
+        setIsConnected(false);
+      });
+
+      onStatus((data) => {
+        console.log('Status:', data.message);
+      });
+
+      onResponse((data) => {
+        console.log('Received response:', data);
+        
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: data.message || data
+        }]);
+        
+        setIsLoading(false);
+      });
+    };
+
+    initSocket();
+
+    // Cleanup on unmount
+    return () => {
+      disconnectSocket();
+    };
   }, []);
 
   useEffect(() => {
@@ -34,7 +91,7 @@ export default function ChatPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !isConnected) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -47,48 +104,8 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage]
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let assistantMessage = '';
-
-      if (reader) {
-        const assistantId = (Date.now() + 1).toString();
-        setMessages(prev => [...prev, {
-          id: assistantId,
-          role: 'assistant',
-          content: ''
-        }]);
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          assistantMessage += chunk;
-          
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === assistantId 
-                ? { ...msg, content: assistantMessage }
-                : msg
-            )
-          );
-        }
-      }
+      // Send message via Socket.io
+      sendChatMessage(userMessage.content);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
@@ -96,7 +113,6 @@ export default function ChatPage() {
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.'
       }]);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -107,6 +123,15 @@ export default function ChatPage() {
 
   return (
     <div className='flex h-[calc(100vh-4rem)] flex-col'>
+      {/* Connection Status */}
+      {!isConnected && (
+        <div className='bg-destructive/10 border-b border-destructive/20 px-4 py-2 text-center'>
+          <p className='text-sm text-destructive'>
+            Connecting to AI server...
+          </p>
+        </div>
+      )}
+      
       {/* Chat Messages */}
       <ScrollArea className='flex-1 px-2 sm:px-4' ref={scrollRef}>
         <div className='mx-auto max-w-4xl space-y-4 sm:space-y-6 py-4 sm:py-6'>
@@ -177,14 +202,18 @@ export default function ChatPage() {
             <Button
               type='submit'
               size='icon'
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || !isConnected}
               className='absolute right-1 top-1 h-10 w-10 bg-accent text-accent-foreground hover:bg-accent/90'
             >
               <Send className='h-4 w-4' />
             </Button>
           </form>
           <p className='mt-2 text-center text-xs text-muted-foreground'>
-            AI Assistant can make mistakes. Consider checking important information.
+            {isConnected ? (
+              <>AI Assistant can make mistakes. Consider checking important information.</>
+            ) : (
+              <>Connecting to AI server...</>
+            )}
           </p>
         </div>
       </div>
