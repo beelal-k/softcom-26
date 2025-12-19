@@ -227,7 +227,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className='fixed inset-0 top-16 flex flex-col'>
+    <div className='flex h-[calc(100vh-4rem)] flex-col'>
       <div 
         className='flex-1 flex flex-col relative overflow-hidden'
         onDrop={handleDrop}

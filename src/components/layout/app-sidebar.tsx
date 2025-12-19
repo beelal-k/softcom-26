@@ -26,7 +26,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarRail
+  SidebarRail,
+  useSidebar
 } from '@/components/ui/sidebar';
 import { UserAvatarProfile } from '@/components/user-avatar-profile';
 import { navItems } from '@/config/nav-config';
@@ -49,9 +50,15 @@ import { OrgSwitcher } from '../org-switcher';
 export default function AppSidebar() {
   const pathname = usePathname();
   const { isOpen } = useMediaQuery();
+  const { state } = useSidebar();
 
   const router = useRouter();
   const filteredItems = useFilteredNavItems(navItems);
+
+  // Move AI Assistant to the top
+  const aiAssistant = filteredItems.find(item => item.title === 'AI Assistant');
+  const otherItems = filteredItems.filter(item => item.title !== 'AI Assistant');
+  const reorderedItems = aiAssistant ? [aiAssistant, ...otherItems] : filteredItems;
 
   const handleLogout = () => {
     // Clear user data from localStorage
@@ -74,7 +81,7 @@ export default function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
-            {filteredItems.map((item) => {
+            {reorderedItems.map((item) => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo;
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible
@@ -89,9 +96,9 @@ export default function AppSidebar() {
                         tooltip={item.title}
                         isActive={pathname === item.url}
                       >
-                        {item.icon && <Icon />}
-                        <span>{item.title}</span>
-                        <IconChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+                        {item.icon && <Icon className='shrink-0' />}
+                        <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
+                        <IconChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden' />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
@@ -123,7 +130,7 @@ export default function AppSidebar() {
                   >
                     <Link href={item.url}>
                       <Icon />
-                      <span>{item.title}</span>
+                      <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -141,13 +148,13 @@ export default function AppSidebar() {
                   size='lg'
                   className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
                 >
-                  {/* {user && (
-                    <UserAvatarProfile
-                      className='h-8 w-8 rounded-lg'
-                      showInfo
-                      user={user}
-                    />
-                  )} */}
+                  <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground'>
+                    <IconUserCircle className='size-4' />
+                  </div>
+                  <div className='grid flex-1 text-left text-sm leading-tight'>
+                    <span className='truncate font-semibold'>User Menu</span>
+                    <span className='truncate text-xs'>Account Settings</span>
+                  </div>
                   <IconChevronsDown className='ml-auto size-4' />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -158,14 +165,14 @@ export default function AppSidebar() {
                 sideOffset={4}
               >
                 <DropdownMenuLabel className='p-0 font-normal'>
-                  <div className='px-1 py-1.5'>
-                    {/* {user && (
-                      <UserAvatarProfile
-                        className='h-8 w-8 rounded-lg'
-                        showInfo
-                        user={user}
-                      />
-                    )} */}
+                  <div className='flex items-center gap-2 px-1 py-1.5 text-left text-sm'>
+                    <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground'>
+                      <IconUserCircle className='size-4' />
+                    </div>
+                    <div className='grid flex-1 text-left text-sm leading-tight'>
+                      <span className='truncate font-semibold'>User</span>
+                      <span className='truncate text-xs'>user@example.com</span>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
