@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   initializeSocket,
   joinRoom,
@@ -225,33 +227,34 @@ export default function ChatPage() {
   }
 
   return (
-    <div 
-      className='flex h-[calc(100vh-4rem)] flex-col relative'
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    >
-      {/* Drag Overlay */}
-      {isDragging && (
-        <div className='absolute inset-0 z-50 bg-accent/20 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-accent'>
-          <div className='text-center'>
-            <Upload className='h-16 w-16 text-accent mx-auto mb-4' />
-            <p className='text-xl font-semibold'>Drop file to upload</p>
+    <div className='fixed inset-0 top-16 flex flex-col'>
+      <div 
+        className='flex-1 flex flex-col relative overflow-hidden'
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        {/* Drag Overlay */}
+        {isDragging && (
+          <div className='absolute inset-0 z-50 bg-accent/20 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-accent'>
+            <div className='text-center'>
+              <Upload className='h-16 w-16 text-accent mx-auto mb-4' />
+              <p className='text-xl font-semibold'>Drop file to upload</p>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {/* Connection Status */}
-      {!isConnected && (
-        <div className='bg-destructive/10 border-b border-destructive/20 px-4 py-2 text-center'>
-          <p className='text-sm text-destructive'>
-            Connecting to AI server...
-          </p>
-        </div>
-      )}
-      
-      {/* Chat Messages */}
-      <ScrollArea className='flex-1 px-2 sm:px-4' ref={scrollRef}>
+        )}
+        
+        {/* Connection Status */}
+        {!isConnected && (
+          <div className='bg-destructive/10 border-b border-destructive/20 px-4 py-2 text-center'>
+            <p className='text-sm text-destructive'>
+              Connecting to AI server...
+            </p>
+          </div>
+        )}
+        
+        {/* Chat Messages */}
+        <div className='flex-1 overflow-y-auto px-2 sm:px-4' ref={scrollRef}>
         <div className='mx-auto max-w-4xl space-y-4 sm:space-y-6 py-4 sm:py-6'>
           {messages.length === 0 ? (
             <div className='flex h-[calc(100vh-20rem)] flex-col items-center justify-center space-y-4'>
@@ -312,10 +315,10 @@ export default function ChatPage() {
             />
           )}
         </div>
-      </ScrollArea>
-
-      {/* Input Area */}
-      <div className='border-t bg-background px-4 py-4'>
+      </div>
+      
+      {/* Input Area - Fixed at bottom */}
+      <div className='border-t bg-background px-4 py-4 flex-shrink-0'>
         <div className='mx-auto max-w-4xl'>
           {/* File Preview */}
           {uploadedFile && (
@@ -379,6 +382,7 @@ export default function ChatPage() {
           </p>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -428,7 +432,34 @@ function ChatMessage({
             <span className='text-sm text-muted-foreground'>Thinking...</span>
           </div>
         ) : (
-          <p className='whitespace-pre-wrap text-sm leading-relaxed'>{content}</p>
+          isUser ? (
+            <p className='whitespace-pre-wrap text-sm leading-relaxed'>{content}</p>
+          ) : (
+            <div className='prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed'>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => <p className='mb-2 last:mb-0'>{children}</p>,
+                  ul: ({ children }) => <ul className='mb-2 ml-4 list-disc'>{children}</ul>,
+                  ol: ({ children }) => <ol className='mb-2 ml-4 list-decimal'>{children}</ol>,
+                  li: ({ children }) => <li className='mb-1'>{children}</li>,
+                  code: ({ children, className }) => {
+                    const isInline = !className;
+                    return isInline ? (
+                      <code className='px-1.5 py-0.5 rounded bg-muted text-accent font-mono text-xs'>{children}</code>
+                    ) : (
+                      <code className='block p-2 rounded bg-muted font-mono text-xs overflow-x-auto'>{children}</code>
+                    );
+                  },
+                  pre: ({ children }) => <pre className='mb-2 overflow-x-auto'>{children}</pre>,
+                  strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
+                  a: ({ children, href }) => <a href={href} className='text-accent hover:underline' target='_blank' rel='noopener noreferrer'>{children}</a>
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
+          )
         )}
       </Card>
     </div>
