@@ -110,6 +110,8 @@ export default function AppSidebar() {
                     asChild
                     tooltip={item.title}
                     isActive={pathname === item.url}
+                    size='lg'
+                    className={item.title === 'AI Assistant' ? 'bg-accent text-accent-foreground hover:bg-accent/90 data-[state=open]:bg-accent data-[active=true]:bg-accent' : ''}
                   >
                     <Link href={item.url}>
                       <Icon />

@@ -42,6 +42,14 @@ export const navItems: NavItem[] = [
     items: []
   },
   {
+    title: 'AI Assistant',
+    url: '/dashboard/chat',
+    icon: 'aiChat',
+    isActive: false,
+    shortcut: ['a', 'i'],
+    items: []
+  },
+  {
     title: 'Workspaces',
     url: '/dashboard/workspaces',
     icon: 'workspace',
