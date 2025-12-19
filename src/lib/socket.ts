@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 const SOCKET_URL = 'https://contaminous-shemika-superelated.ngrok-free.dev';
 
 let socket: Socket | null = null;
-let currentUserId: string | null = null;
+let currentUserId: string ;
 
 /**
  * Get user ID from localStorage
@@ -128,7 +128,7 @@ export const joinRoom = async (roomName?: string): Promise<void> => {
 /**
  * Send a chat message
  */
-export const sendChatMessage = async (message: string, roomName?: string): Promise<void> => {
+export const sendChatMessage = async (message: string, roomName?: string, attachments?: string[]): Promise<void> => {
   if (!socket) {
     console.error('Socket not initialized');
     return;
@@ -139,10 +139,14 @@ export const sendChatMessage = async (message: string, roomName?: string): Promi
 
   socket.emit('chat_message', {
     room,
-    message
+    message,
+    attachments: attachments || []
   });
   
   console.log(`💬 Sent message to ${room}:`, message);
+  if (attachments && attachments.length > 0) {
+    console.log(`📎 Attachments:`, attachments);
+  }
 };
 
 /**

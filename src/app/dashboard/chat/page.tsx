@@ -189,16 +189,19 @@ export default function ChatPage() {
     if ((!input.trim() && !uploadedFile) || isLoading || !isConnected) return;
 
     let messageContent = input.trim();
+    let displayContent = input.trim();
+    const attachments: string[] = [];
     
-    // If file is attached, include it in message
+    // If file is attached, add to attachments array and show filename in display
     if (uploadedFile) {
-      messageContent = `${messageContent}\n\n📎 Attached file: ${uploadedFile.name}\n${uploadedFile.url}`;
+      attachments.push(uploadedFile.url);
+      displayContent = displayContent ? `${displayContent}\n\n📎 ${uploadedFile.name}` : `📎 ${uploadedFile.name}`;
     }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: messageContent,
+      content: displayContent,
       fileUrl: uploadedFile?.url,
       fileName: uploadedFile?.name
     };
@@ -206,11 +209,17 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setUploadedFile(null);
+    
+    // Reset file input to allow new uploads
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
     setIsLoading(true);
 
     try {
-      // Send message via Socket.io
-      sendChatMessage(messageContent);
+      // Send message via Socket.io with attachments array
+      sendChatMessage(messageContent, undefined, attachments);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
@@ -367,7 +376,7 @@ export default function ChatPage() {
             <Button
               type='submit'
               size='icon'
-              disabled={!input.trim() || isLoading || !isConnected}
+              disabled={(!input.trim() && !uploadedFile) || isLoading || !isConnected}
               className='absolute right-1 top-1 h-10 w-10 bg-accent text-accent-foreground hover:bg-accent/90'
             >
               <Send className='h-4 w-4' />
