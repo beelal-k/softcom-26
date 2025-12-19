@@ -17,13 +17,15 @@ import {
   onConnectionError,
   disconnectSocket
 } from '@/lib/socket';
-import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare } from 'lucide-react';
-import { useEffect, useRef, useState, FormEvent } from 'react';
+import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload } from 'lucide-react';
+import { useEffect, useRef, useState, FormEvent, DragEvent } from 'react';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  fileUrl?: string;
+  fileName?: string;
 }
 
 export default function ChatPage() {
@@ -32,7 +34,11 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     setMounted(true);
@@ -89,23 +95,121 @@ export default function ChatPage() {
     }
   }, [messages]);
 
+  const handleFileUpload = async (file: File) => {
+    console.log('Starting upload for:', file.name, file.type, file.size);
+    
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'csv', 'xlsx', 'xls'];
+    
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension || '')) {
+      alert('Only images (JPG, PNG, GIF, WebP), PDF, CSV, and Excel files are allowed.');
+      return;
+    }
+    
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      console.log('Sending upload request...');
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      console.log('Upload response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Upload error response:', errorData);
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+      console.log('Upload successful:', data);
+      setUploadedFile({ url: data.url, name: file.name });
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set to false if we're leaving the main container
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      console.log('File dropped:', file.name);
+      handleFileUpload(file);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !isConnected) return;
+    if ((!input.trim() && !uploadedFile) || isLoading || !isConnected) return;
+
+    let messageContent = input.trim();
+    
+    // If file is attached, include it in message
+    if (uploadedFile) {
+      messageContent = `${messageContent}\n\n📎 Attached file: ${uploadedFile.name}\n${uploadedFile.url}`;
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim()
+      content: messageContent,
+      fileUrl: uploadedFile?.url,
+      fileName: uploadedFile?.name
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setUploadedFile(null);
     setIsLoading(true);
 
     try {
       // Send message via Socket.io
-      sendChatMessage(userMessage.content);
+      sendChatMessage(messageContent);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
@@ -122,7 +226,22 @@ export default function ChatPage() {
   }
 
   return (
-    <div className='flex h-[calc(100vh-4rem)] flex-col'>
+    <div 
+      className='flex h-[calc(100vh-4rem)] flex-col relative'
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    >
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className='absolute inset-0 z-50 bg-accent/20 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-accent'>
+          <div className='text-center'>
+            <Upload className='h-16 w-16 text-accent mx-auto mb-4' />
+            <p className='text-xl font-semibold'>Drop file to upload</p>
+          </div>
+        </div>
+      )}
+      
       {/* Connection Status */}
       {!isConnected && (
         <div className='bg-destructive/10 border-b border-destructive/20 px-4 py-2 text-center'>
@@ -149,23 +268,31 @@ export default function ChatPage() {
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl mt-8'>
                 <SuggestedPrompt
                   icon={<Zap className='h-5 w-5' />}
-                  title='Explain a concept'
-                  description='Help me understand complex topics'
+                  title='Analyze transactions'
+                  description='Review recent financial activity'
+                  prompt='Analyze my recent transactions and identify spending patterns'
+                  onClick={setInput}
                 />
                 <SuggestedPrompt
                   icon={<Lightbulb className='h-5 w-5' />}
-                  title='Generate ideas'
-                  description='Brainstorm creative solutions'
+                  title='Investment advice'
+                  description='Get portfolio recommendations'
+                  prompt='What investment strategies would you recommend for long-term growth?'
+                  onClick={setInput}
                 />
                 <SuggestedPrompt
                   icon={<FileText className='h-5 w-5' />}
-                  title='Review my work'
-                  description='Get feedback on my content'
+                  title='Budget planning'
+                  description='Create a financial plan'
+                  prompt='Help me create a monthly budget based on my income and expenses'
+                  onClick={setInput}
                 />
                 <SuggestedPrompt
                   icon={<MessageSquare className='h-5 w-5' />}
-                  title='Write content'
-                  description='Draft emails or documents'
+                  title='Financial reports'
+                  description='Generate insights from data'
+                  prompt='Generate a summary report of my financial performance this quarter'
+                  onClick={setInput}
                 />
               </div>
             </div>
@@ -191,12 +318,48 @@ export default function ChatPage() {
       {/* Input Area */}
       <div className='border-t bg-background px-4 py-4'>
         <div className='mx-auto max-w-4xl'>
+          {/* File Preview */}
+          {uploadedFile && (
+            <div className='mb-2 flex items-center gap-2 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2'>
+              <Paperclip className='h-4 w-4 text-accent' />
+              <span className='text-sm flex-1 truncate'>{uploadedFile.name}</span>
+              <button
+                onClick={() => setUploadedFile(null)}
+                className='text-muted-foreground hover:text-foreground'
+                type='button'
+              >
+                <X className='h-4 w-4' />
+              </button>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className='relative'>
+            <input
+              ref={fileInputRef}
+              type='file'
+              onChange={handleFileSelect}
+              className='hidden'
+              accept='image/*,.pdf,.csv,.xlsx,.xls'
+            />
+            <Button
+              type='button'
+              size='icon'
+              variant='ghost'
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading || isLoading}
+              className='absolute left-2 top-1 h-10 w-10 text-muted-foreground hover:text-foreground'
+            >
+              {isUploading ? (
+                <div className='h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin' />
+              ) : (
+                <Paperclip className='h-4 w-4' />
+              )}
+            </Button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder='Ask me anything...'
-              className='pr-12 h-12 text-base'
+              className='pl-12 pr-12 h-12 text-base'
               disabled={isLoading}
             />
             <Button
@@ -276,14 +439,21 @@ function ChatMessage({
 function SuggestedPrompt({
   icon,
   title,
-  description
+  description,
+  prompt,
+  onClick
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  prompt: string;
+  onClick: (value: string) => void;
 }) {
   return (
-    <Card className='p-4 cursor-pointer transition-all hover:border-accent hover:shadow-md group'>
+    <Card 
+      className='p-4 cursor-pointer transition-all hover:border-accent hover:shadow-md group'
+      onClick={() => onClick(prompt)}
+    >
       <div className='flex items-start gap-3'>
         <div className='flex items-center justify-center rounded-lg bg-accent/10 p-2 text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-colors'>
           {icon}
