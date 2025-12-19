@@ -12,11 +12,40 @@ import { InteractiveGridPattern } from './interactive-grid';
 export default function SignInViewPage({ stars }: { stars: number }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle sign in logic here
-    console.log('Sign in:', { email, password });
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Login failed');
+        return;
+      }
+
+      // Store user data (in production, use proper session management)
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,6 +98,11 @@ export default function SignInViewPage({ stars }: { stars: number }) {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className='space-y-4'>
+                {error && (
+                  <div className='rounded-lg bg-destructive/10 p-3 text-sm text-destructive'>
+                    {error}
+                  </div>
+                )}
                 <div className='space-y-2'>
                   <Label htmlFor='email'>Email</Label>
                   <Input
@@ -99,8 +133,12 @@ export default function SignInViewPage({ stars }: { stars: number }) {
                     required
                   />
                 </div>
-                <Button type='submit' className='w-full bg-accent text-accent-foreground hover:bg-accent/90'>
-                  Sign In
+                <Button 
+                  type='submit' 
+                  className='w-full bg-accent text-accent-foreground hover:bg-accent/90'
+                  disabled={loading}
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </form>
               <div className='mt-6 text-center text-sm'>

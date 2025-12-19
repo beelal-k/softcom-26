@@ -13,12 +13,36 @@ import { InteractiveGridPattern } from './interactive-grid';
 export default function ForgotPasswordViewPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle forgot password logic here
-    console.log('Forgot password:', { email });
-    setSubmitted(true);
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to send reset link');
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -76,6 +100,11 @@ export default function ForgotPasswordViewPage() {
             <CardContent>
               {!submitted ? (
                 <form onSubmit={handleSubmit} className='space-y-4'>
+                  {error && (
+                    <div className='rounded-lg bg-destructive/10 p-3 text-sm text-destructive'>
+                      {error}
+                    </div>
+                  )}
                   <div className='space-y-2'>
                     <Label htmlFor='email'>Email</Label>
                     <Input
@@ -87,8 +116,12 @@ export default function ForgotPasswordViewPage() {
                       required
                     />
                   </div>
-                  <Button type='submit' className='w-full bg-accent text-accent-foreground hover:bg-accent/90'>
-                    Send Reset Link
+                  <Button 
+                    type='submit' 
+                    className='w-full bg-accent text-accent-foreground hover:bg-accent/90'
+                    disabled={loading}
+                  >
+                    {loading ? 'Sending...' : 'Send Reset Link'}
                   </Button>
                 </form>
               ) : (

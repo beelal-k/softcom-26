@@ -14,11 +14,51 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle sign up logic here
-    console.log('Sign up:', { name, email, password, confirmPassword });
+    setLoading(true);
+    setError('');
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          username: name,
+          email, 
+          password 
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Registration failed');
+        return;
+      }
+
+      // Store user data
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,6 +111,11 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className='space-y-4'>
+                {error && (
+                  <div className='rounded-lg bg-destructive/10 p-3 text-sm text-destructive'>
+                    {error}
+                  </div>
+                )}
                 <div className='space-y-2'>
                   <Label htmlFor='name'>Full Name</Label>
                   <Input
@@ -115,8 +160,12 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
                     required
                   />
                 </div>
-                <Button type='submit' className='w-full bg-accent text-accent-foreground hover:bg-accent/90'>
-                  Create Account
+                <Button 
+                  type='submit' 
+                  className='w-full bg-accent text-accent-foreground hover:bg-accent/90'
+                  disabled={loading}
+                >
+                  {loading ? 'Creating account...' : 'Create Account'}
                 </Button>
               </form>
               <div className='mt-6 text-center text-sm'>

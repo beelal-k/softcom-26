@@ -107,21 +107,6 @@ export default function ChatPage() {
 
   return (
     <div className='flex h-[calc(100vh-4rem)] flex-col'>
-      {/* Header */}
-      <div className='border-b bg-card px-4 sm:px-6 py-4'>
-        <div className='flex items-center gap-3'>
-          <div className='flex items-center justify-center rounded-lg bg-accent p-2'>
-            <Sparkles className='h-5 w-5 sm:h-6 sm:w-6 text-accent-foreground' />
-          </div>
-          <div>
-            <h1 className='text-xl sm:text-2xl font-bold'>AI Assistant</h1>
-            <p className='text-xs sm:text-sm text-muted-foreground'>
-              Your intelligent workspace companion
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Chat Messages */}
       <ScrollArea className='flex-1 px-2 sm:px-4' ref={scrollRef}>
         <div className='mx-auto max-w-4xl space-y-4 sm:space-y-6 py-4 sm:py-6'>

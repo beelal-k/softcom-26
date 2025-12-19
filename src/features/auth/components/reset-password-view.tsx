@@ -7,20 +7,70 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { InteractiveGridPattern } from './interactive-grid';
 
 export default function ResetPasswordViewPage() {
+  const searchParams = useSearchParams();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [token, setToken] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const tokenParam = searchParams.get('token');
+    if (!tokenParam) {
+      setError('Invalid or missing reset token');
+    } else {
+      setToken(tokenParam);
+    }
+  }, [searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle reset password logic here
-    console.log('Reset password:', { password, confirmPassword });
-    if (password === confirmPassword) {
+    setLoading(true);
+    setError('');
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (!token) {
+      setError('Invalid or missing reset token');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          token,
+          password 
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to reset password');
+        return;
+      }
+
       setSuccess(true);
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,6 +129,11 @@ export default function ResetPasswordViewPage() {
             <CardContent>
               {!success ? (
                 <form onSubmit={handleSubmit} className='space-y-4'>
+                  {error && (
+                    <div className='rounded-lg bg-destructive/10 p-3 text-sm text-destructive'>
+                      {error}
+                    </div>
+                  )}
                   <div className='space-y-2'>
                     <Label htmlFor='password'>New Password</Label>
                     <Input
@@ -106,8 +161,12 @@ export default function ResetPasswordViewPage() {
                       minLength={8}
                     />
                   </div>
-                  <Button type='submit' className='w-full bg-accent text-accent-foreground hover:bg-accent/90'>
-                    Reset Password
+                  <Button 
+                    type='submit' 
+                    className='w-full bg-accent text-accent-foreground hover:bg-accent/90'
+                    disabled={loading || !token}
+                  >
+                    {loading ? 'Resetting...' : 'Reset Password'}
                   </Button>
                 </form>
               ) : (
