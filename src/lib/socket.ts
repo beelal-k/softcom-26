@@ -3,6 +3,29 @@ import { io, Socket } from 'socket.io-client';
 const SOCKET_URL = 'https://contaminous-shemika-superelated.ngrok-free.dev';
 
 let socket: Socket | null = null;
+let currentUserId: string | null = null;
+
+/**
+ * Get user ID from localStorage
+ */
+const getUserId = (): string => {
+  if (currentUserId) return currentUserId;
+  
+  const user = localStorage.getItem('user');
+  
+  if (user) {
+    try {
+      const userData = JSON.parse(user);
+      currentUserId = userData.id || userData._id || 'default-user';
+      return currentUserId;
+    } catch (e) {
+      console.error('Failed to parse user data:', e);
+    }
+  }
+  
+  currentUserId = 'default-user';
+  return currentUserId;
+};
 
 /**
  * Get auth token from server-side JWT generation
@@ -95,8 +118,8 @@ export const getSocket = (): Socket | null => {
 export const joinRoom = async (roomName?: string): Promise<void> => {
   if (!socket) return;
   
-  const authToken = await getAuthToken();
-  const room = roomName || `user-${authToken}`;
+  const userId = getUserId();
+  const room = roomName || `user-${userId}`;
   
   socket.emit('join_room', room);
   console.log(`📥 Joined room: ${room}`);
@@ -111,8 +134,8 @@ export const sendChatMessage = async (message: string, roomName?: string): Promi
     return;
   }
 
-  const authToken = await getAuthToken();
-  const room = roomName || `user-${authToken}`;
+  const userId = getUserId();
+  const room = roomName || `user-${userId}`;
 
   socket.emit('chat_message', {
     room,

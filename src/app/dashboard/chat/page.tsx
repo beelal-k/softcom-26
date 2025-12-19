@@ -61,7 +61,6 @@ export default function ChatPage() {
       onStatus((data) => {
         console.log('Status:', data.message);
       });
-
       onResponse((data) => {
         console.log('Received response:', data);
         
