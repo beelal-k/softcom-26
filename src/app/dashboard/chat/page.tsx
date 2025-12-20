@@ -19,9 +19,8 @@ import {
   onConnectionError,
   disconnectSocket
 } from '@/lib/socket';
-import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Cloud } from 'lucide-react';
+import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Cloud, Copy, Download, Check  } from 'lucide-react';
 import { useEffect, useRef, useState, FormEvent, DragEvent, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { AIChart } from '@/components/ui/ai-chart';
 import { 
   DropdownMenu, 
@@ -29,6 +28,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { useSearchParams } from 'next/navigation';
 
 interface ChatMessage {
   id: string;
@@ -468,6 +468,115 @@ X
   );
 }
 
+function TableWrapper({ children }: { children: React.ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const extractTableData = () => {
+    if (!tableRef.current) return { headers: [], rows: [] };
+    
+    const table = tableRef.current.querySelector('table');
+    if (!table) return { headers: [], rows: [] };
+
+    const headers: string[] = [];
+    const rows: string[][] = [];
+
+    // Extract headers
+    const headerCells = table.querySelectorAll('thead th');
+    headerCells.forEach(cell => {
+      headers.push(cell.textContent?.trim() || '');
+    });
+
+    // Extract rows
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach(row => {
+      const rowData: string[] = [];
+      const cells = row.querySelectorAll('td');
+      cells.forEach(cell => {
+        rowData.push(cell.textContent?.trim() || '');
+      });
+      rows.push(rowData);
+    });
+
+    return { headers, rows };
+  };
+
+  const handleCopy = async () => {
+    const { headers, rows } = extractTableData();
+    
+    // Create CSV text
+    const csvText = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(csvText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  const handleDownload = () => {
+    const { headers, rows } = extractTableData();
+    
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `table_${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className='relative group' ref={tableRef}>
+      <div className='absolute -top-10 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10'>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-8 px-2'
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <>
+              <Check className='h-3 w-3 mr-1' />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy className='h-3 w-3 mr-1' />
+              Copy
+            </>
+          )}
+        </Button>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-8 px-2'
+          onClick={handleDownload}
+        >
+          <Download className='h-3 w-3 mr-1' />
+          CSV
+        </Button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function ChatMessage({
   role,
   content,
@@ -556,7 +665,47 @@ function ChatMessage({
                     },
                     pre: ({ children }) => <pre className='mb-2 overflow-x-auto'>{children}</pre>,
                     strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
-                    a: ({ children, href }) => <a href={href} className='text-accent hover:underline' target='_blank' rel='noopener noreferrer'>{children}</a>
+                    a: ({ children, href }) => <a href={href} className='text-accent hover:underline' target='_blank' rel='noopener noreferrer'>{children}</a>,
+                    table: ({ children }) => (
+                      <TableWrapper>
+                        <div className='my-4 overflow-x-auto rounded-lg border border-border w-full'>
+                          <table className='w-full divide-y divide-border'>
+                            {children}
+                          </table>
+                        </div>
+                      </TableWrapper>
+                    ),
+                    thead: ({ children }) => (
+                      <thead className='bg-muted'>
+                        {children}
+                      </thead>
+                    ),
+                    tbody: ({ children }) => (
+                      <tbody className='divide-y divide-border'>
+                        {children}
+                      </tbody>
+                    ),
+                    tr: ({ children, ...props }) => {
+                      const isHeader = props.className?.includes('head');
+                      return (
+                        <tr className={cn(
+                          !isHeader && 'even:bg-muted/30',
+                          'transition-colors'
+                        )}>
+                          {children}
+                        </tr>
+                      );
+                    },
+                    th: ({ children }) => (
+                      <th className='px-6 py-3 text-left text-sm font-semibold'>
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children }) => (
+                      <td className='px-6 py-4 text-sm'>
+                        {children}
+                      </td>
+                    )
                   }}
                 >
                   {processedData.text}
@@ -565,12 +714,6 @@ function ChatMessage({
             )
           )}
         </Card>
-        
-        {processedData.chart && (
-          <div className="w-full mt-2">
-            <AIChart data={processedData.chart} />
-          </div>
-        )}
       </div>
     </div>
   );
