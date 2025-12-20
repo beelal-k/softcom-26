@@ -1,4 +1,7 @@
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./src/i18n/config.ts');
 
 // Define the base Next.js configuration
 const nextConfig: NextConfig = {
@@ -24,4 +27,4 @@ const nextConfig: NextConfig = {
   transpilePackages: ['geist']
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

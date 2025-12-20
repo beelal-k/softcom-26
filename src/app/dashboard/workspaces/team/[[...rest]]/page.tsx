@@ -45,7 +45,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { UserPlus, MoreVertical, Pencil, Trash2, Mail, Shield, Eye } from 'lucide-react';
+import {
+  UserPlus,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Mail,
+  Shield,
+  Eye
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 
@@ -109,33 +117,43 @@ export default function TeamPage() {
       try {
         // Fetch organization details
         const orgResponse = await apiClient.organizations.getById(orgId);
-        
+
         if (orgResponse.success && orgResponse.data) {
           const orgData = orgResponse.data;
           const currentUserId = currentUser?.id || currentUser?._id;
-          
+
           const org: Organization = {
             id: orgData._id || orgData.id,
             name: orgData.name,
             ownerId: orgData.owner?._id || orgData.owner,
-            userRole: (orgData.owner === currentUserId || orgData.owner?._id === currentUserId) 
-              ? 'Owner' 
-              : (orgData.userRole || 'Member')
+            userRole:
+              orgData.owner === currentUserId ||
+              orgData.owner?._id === currentUserId
+                ? 'Owner'
+                : orgData.userRole || 'Member'
           };
           setOrganization(org);
 
           // Fetch teams for this organization
           const teamsResponse = await apiClient.teams.getByOrganization(orgId);
-          
-          if (teamsResponse.success && teamsResponse.data && teamsResponse.data.length > 0) {
+
+          if (
+            teamsResponse.success &&
+            teamsResponse.data &&
+            teamsResponse.data.length > 0
+          ) {
             // Get members from the first team (or combine all teams)
             const team = teamsResponse.data[0];
             setTeamId(team._id || team.id);
-            
+
             if (team.members && Array.isArray(team.members)) {
               const members: TeamMember[] = team.members.map((member: any) => ({
                 id: member.userId?._id || member.userId || member.id,
-                name: member.userId?.name || member.userId?.username || member.name || 'Unknown',
+                name:
+                  member.userId?.name ||
+                  member.userId?.username ||
+                  member.name ||
+                  'Unknown',
                 email: member.userId?.email || member.email || '',
                 role: member.role || 'Member',
                 joinedAt: member.joinedAt || new Date().toISOString()
@@ -188,34 +206,30 @@ export default function TeamPage() {
     try {
       // Search for user by email
       const userResponse = await apiClient.users.search(data.email, 1);
-      
-      if (!userResponse.success || !userResponse.data || userResponse.data.length === 0) {
+
+      if (
+        !userResponse.success ||
+        !userResponse.data ||
+        userResponse.data.length === 0
+      ) {
         toast.error('User not found. Please ensure the user is registered.');
         return;
       }
 
       const user = userResponse.data[0];
-      const userId = user._id || user.id;
 
       // Add member to team
-      const response = await apiClient.teams.addMember(teamId, {
-        userId,
-        role: data.role.toLowerCase()
+      const response = await apiClient.invitations.send({
+        teamId,
+        email: data.email,
+        organizationId: orgId,
+        role: data.role
       });
-
       if (response.success) {
-        const newMember: TeamMember = {
-          id: userId,
-          name: user.name || user.username || data.name,
-          email: user.email || data.email,
-          role: data.role,
-          joinedAt: new Date().toISOString()
-        };
-
-        setTeamMembers([...teamMembers, newMember]);
+        toast.success(response.message || 'Team member added successfully');
+        // close the add dialog
         setIsAddDialogOpen(false);
         addForm.reset();
-        toast.success(response.message || 'Team member added successfully');
       } else {
         toast.error(response.error || 'Failed to add team member');
       }
@@ -261,10 +275,15 @@ export default function TeamPage() {
     if (!selectedMember || !teamId) return;
 
     try {
-      const response = await apiClient.teams.removeMember(teamId, selectedMember.id);
+      const response = await apiClient.teams.removeMember(
+        teamId,
+        selectedMember.id
+      );
 
       if (response.success) {
-        setTeamMembers(teamMembers.filter((member) => member.id !== selectedMember.id));
+        setTeamMembers(
+          teamMembers.filter((member) => member.id !== selectedMember.id)
+        );
         setIsDeleteDialogOpen(false);
         setSelectedMember(null);
         toast.success(response.message || 'Team member removed successfully');
@@ -289,7 +308,8 @@ export default function TeamPage() {
   };
 
   // Check if current user is owner
-  const isOwner = organization?.ownerId === (currentUser?.id || currentUser?._id);
+  const isOwner =
+    organization?.ownerId === (currentUser?.id || currentUser?._id);
 
   // Get role badge color
   const getRoleBadgeColor = (role: string) => {
@@ -311,10 +331,11 @@ export default function TeamPage() {
       pageDescription='Manage your workspace team members and their roles'
     >
       {!isOwner && (
-        <Alert className='mb-6 border-muted-foreground/20'>
+        <Alert className='border-muted-foreground/20 mb-6'>
           <Eye className='h-4 w-4' />
           <AlertDescription>
-            You have view-only access to this workspace. You can view team members but cannot add, edit, or remove them.
+            You have view-only access to this workspace. You can view team
+            members but cannot add, edit, or remove them.
             {organization?.userRole && (
               <span className='ml-1 font-medium'>
                 Your role: {organization.userRole}
@@ -328,7 +349,8 @@ export default function TeamPage() {
         <div>
           <h2 className='text-2xl font-bold'>{organization?.name}</h2>
           <p className='text-muted-foreground text-sm'>
-            {teamMembers.length} team member{teamMembers.length !== 1 ? 's' : ''}
+            {teamMembers.length} team member
+            {teamMembers.length !== 1 ? 's' : ''}
           </p>
         </div>
         {isOwner && (
@@ -348,12 +370,12 @@ export default function TeamPage() {
             <CardHeader>
               <div className='flex items-start justify-between'>
                 <div className='flex items-center gap-3'>
-                  <div className='flex h-10 w-10 items-center justify-center rounded-full bg-primary/10'>
-                    <Shield className='h-5 w-5 text-primary' />
+                  <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full'>
+                    <Shield className='text-primary h-5 w-5' />
                   </div>
                   <div>
                     <CardTitle className='text-base'>{member.name}</CardTitle>
-                    <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+                    <div className='text-muted-foreground flex items-center gap-1 text-xs'>
                       <Mail className='h-3 w-3' />
                       {member.email}
                     </div>
@@ -394,7 +416,7 @@ export default function TeamPage() {
                 >
                   {member.role}
                 </span>
-                <span className='text-xs text-muted-foreground'>
+                <span className='text-muted-foreground text-xs'>
                   Joined {new Date(member.joinedAt).toLocaleDateString()}
                 </span>
               </div>

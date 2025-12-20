@@ -2,6 +2,10 @@ import connectDB from '@/lib/db/mongodb';
 import TeamModel, { ITeam, ITeamMember } from '@/lib/models/team';
 import mongoose from 'mongoose';
 
+// Valid team roles: member (team member), manager (team admin)
+export const VALID_TEAM_ROLES = ['member', 'manager'] as const;
+export type TeamRole = (typeof VALID_TEAM_ROLES)[number];
+
 export const teamService = {
   /**
    * Create a new team
@@ -126,6 +130,17 @@ export const teamService = {
     }
   ): Promise<ITeam | null> {
     await connectDB();
+
+    // Validate role
+    if (!VALID_TEAM_ROLES.includes(member.role as TeamRole)) {
+      throw new Error(
+        `Invalid role. Must be one of: ${VALID_TEAM_ROLES.join(', ')}`
+      );
+    }
+
+    console.log('member', member);
+    console.log('teamId', teamId);
+
     const team = await TeamModel.findByIdAndUpdate(
       teamId,
       {
@@ -141,6 +156,8 @@ export const teamService = {
       },
       { new: true }
     ).lean();
+
+    console.log('team', team);
 
     return team as ITeam | null;
   },
@@ -171,6 +188,14 @@ export const teamService = {
     role: string
   ): Promise<ITeam | null> {
     await connectDB();
+
+    // Validate role
+    if (!VALID_TEAM_ROLES.includes(role as TeamRole)) {
+      throw new Error(
+        `Invalid role. Must be one of: ${VALID_TEAM_ROLES.join(', ')}`
+      );
+    }
+
     const team = await TeamModel.findOneAndUpdate(
       { _id: teamId, 'members.userId': new mongoose.Types.ObjectId(userId) },
       { $set: { 'members.$.role': role } },
@@ -183,7 +208,10 @@ export const teamService = {
   /**
    * Add permission to team
    */
-  async addPermission(teamId: string, permission: string): Promise<ITeam | null> {
+  async addPermission(
+    teamId: string,
+    permission: string
+  ): Promise<ITeam | null> {
     await connectDB();
     const team = await TeamModel.findByIdAndUpdate(
       teamId,
@@ -243,4 +271,3 @@ export const teamService = {
     return !!team;
   }
 };
-
