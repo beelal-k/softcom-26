@@ -4,6 +4,9 @@ export interface IOrganization extends Document {
   name: string;
   description: string;
   owner: mongoose.Types.ObjectId;
+  industry: string;
+  company_size: string;
+  website: string;
   createdAt: Date;
 }
 
@@ -18,6 +21,23 @@ const organizationSchema = new Schema<IOrganization>(
       type: String,
       required: true,
       trim: true
+    },
+    industry: {
+      type: String,
+      required: true,
+      trim: true,
+      default: ''
+    },
+    company_size: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    website: {
+      type: String,
+      required: true,
+      trim: true,
+      default: ''
     },
     owner: {
       type: Schema.Types.ObjectId,

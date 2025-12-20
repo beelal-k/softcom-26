@@ -19,8 +19,9 @@ import {
   onConnectionError,
   disconnectSocket
 } from '@/lib/socket';
-import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload } from 'lucide-react';
-import { useEffect, useRef, useState, FormEvent, DragEvent } from 'react';
+import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Copy, Download, Check, FileDown } from 'lucide-react';
+import { useEffect, useRef, useState, FormEvent, DragEvent, Suspense, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 interface ChatMessage {
   id: string;
@@ -28,9 +29,18 @@ interface ChatMessage {
   content: string;
   fileUrl?: string;
   fileName?: string;
+  chartData?: any;
 }
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChatContent />
+    </Suspense>
+  );
+}
+
+function ChatContent() {
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -41,6 +51,9 @@ export default function ChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+  const initialPrompt = searchParams.get('prompt');
+  const hasSentInitialPrompt = useRef(false);
   
   useEffect(() => {
     setMounted(true);
@@ -54,6 +67,20 @@ export default function ChatPage() {
         console.log('✅ Connected to AI server');
         setIsConnected(true);
         joinRoom(); // Join default user room
+
+        if (initialPrompt && !hasSentInitialPrompt.current) {
+            hasSentInitialPrompt.current = true;
+            // Add user message to UI
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'user',
+                content: initialPrompt
+            }]);
+            setIsLoading(true);
+            
+            // Send via socket
+            sendChatMessage(initialPrompt);
+        }
       });
 
       onDisconnect(() => {
@@ -384,7 +411,7 @@ X
           </form>
           <p className='mt-2 text-center text-xs text-muted-foreground'>
             {isConnected ? (
-              <>AI Assistant can make mistakes. Consider checking important information.</>
+              <></>
             ) : (
               <>Connecting to AI server...</>
             )}
@@ -396,16 +423,191 @@ X
   );
 }
 
+function TableWrapper({ children }: { children: React.ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const extractTableData = () => {
+    if (!tableRef.current) return { headers: [], rows: [] };
+    
+    const table = tableRef.current.querySelector('table');
+    if (!table) return { headers: [], rows: [] };
+
+    const headers: string[] = [];
+    const rows: string[][] = [];
+
+    // Extract headers
+    const headerCells = table.querySelectorAll('thead th');
+    headerCells.forEach(cell => {
+      headers.push(cell.textContent?.trim() || '');
+    });
+
+    // Extract rows
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach(row => {
+      const rowData: string[] = [];
+      const cells = row.querySelectorAll('td');
+      cells.forEach(cell => {
+        rowData.push(cell.textContent?.trim() || '');
+      });
+      rows.push(rowData);
+    });
+
+    return { headers, rows };
+  };
+
+  const handleCopy = async () => {
+    const { headers, rows } = extractTableData();
+    
+    // Create CSV text
+    const csvText = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(csvText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  const handleDownload = () => {
+    const { headers, rows } = extractTableData();
+    
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `table_${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadPDF = async () => {
+    const { headers, rows } = extractTableData();
+    
+    // Dynamically import jsPDF
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text('Table Export', 14, 15);
+    
+    // Add table
+    autoTable(doc, {
+      head: [headers],
+      body: rows,
+      startY: 25,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [100, 100, 100],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 3
+      },
+      columnStyles: {},
+      margin: { top: 25 }
+    });
+    
+    // Save the PDF
+    doc.save(`table_${Date.now()}.pdf`);
+  };
+
+  return (
+    <div className='relative group' ref={tableRef}>
+      <div className='absolute -top-10 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10'>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-8 px-2'
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <>
+              <Check className='h-3 w-3 mr-1' />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy className='h-3 w-3 mr-1' />
+              Copy
+            </>
+          )}
+        </Button>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-8 px-2'
+          onClick={handleDownload}
+        >
+          <Download className='h-3 w-3 mr-1' />
+          CSV
+        </Button>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-8 px-2'
+          onClick={handleDownloadPDF}
+        >
+          <FileDown className='h-3 w-3 mr-1' />
+          PDF
+        </Button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function ChatMessage({
   role,
   content,
+  chartData,
   isLoading = false
 }: {
   role: 'user' | 'assistant';
   content: string;
+  chartData?: any;
   isLoading?: boolean;
 }) {
   const isUser = role === 'user';
+
+  const processedData = useMemo(() => {
+    if (chartData) return { text: content, chart: chartData };
+    
+    if (content.includes('CHART_DATA_START')) {
+      try {
+        const parts = content.split('CHART_DATA_START');
+        const textBefore = parts[0];
+        const chartPart = parts[1].split('CHART_DATA_END')[0];
+        const textAfter = parts[1].split('CHART_DATA_END')[1] || '';
+        const chartJson = JSON.parse(chartPart);
+        return { text: textBefore + textAfter, chart: chartJson };
+      } catch (e) {
+        console.error('Failed to parse chart data', e);
+        return { text: content, chart: null };
+      }
+    }
+    return { text: content, chart: null };
+  }, [content, chartData]);
 
   return (
     <div
@@ -423,54 +625,96 @@ function ChatMessage({
           )}
         </AvatarFallback>
       </Avatar>
-      <Card
-        className={cn(
-          'max-w-[80%] px-4 py-3',
-          isUser
-            ? 'bg-accent text-accent-foreground'
-            : 'bg-card'
-        )}
-      >
-        {isLoading ? (
-          <div className='flex items-center gap-2'>
-            <div className='flex gap-1'>
-              <span className='animate-bounce delay-0 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '0ms' }}></span>
-              <span className='animate-bounce delay-100 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '150ms' }}></span>
-              <span className='animate-bounce delay-200 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '300ms' }}></span>
+      <div className={cn("flex flex-col gap-2 max-w-[80%]", isUser && "items-end")}>
+        <Card
+          className={cn(
+            'px-4 py-3',
+            isUser
+              ? 'bg-accent text-accent-foreground'
+              : 'bg-card'
+          )}
+        >
+          {isLoading ? (
+            <div className='flex items-center gap-2'>
+              <div className='flex gap-1'>
+                <span className='animate-bounce delay-0 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '0ms' }}></span>
+                <span className='animate-bounce delay-100 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '150ms' }}></span>
+                <span className='animate-bounce delay-200 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '300ms' }}></span>
+              </div>
+              <span className='text-sm text-muted-foreground'>Thinking...</span>
             </div>
-            <span className='text-sm text-muted-foreground'>Thinking...</span>
-          </div>
-        ) : (
-          isUser ? (
-            <p className='whitespace-pre-wrap text-sm leading-relaxed'>{content}</p>
           ) : (
-            <div className='prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed'>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  p: ({ children }) => <p className='mb-2 last:mb-0'>{children}</p>,
-                  ul: ({ children }) => <ul className='mb-2 ml-4 list-disc'>{children}</ul>,
-                  ol: ({ children }) => <ol className='mb-2 ml-4 list-decimal'>{children}</ol>,
-                  li: ({ children }) => <li className='mb-1'>{children}</li>,
-                  code: ({ children, className }) => {
-                    const isInline = !className;
-                    return isInline ? (
-                      <code className='px-1.5 py-0.5 rounded bg-muted text-accent font-mono text-xs'>{children}</code>
-                    ) : (
-                      <code className='block p-2 rounded bg-muted font-mono text-xs overflow-x-auto'>{children}</code>
-                    );
-                  },
-                  pre: ({ children }) => <pre className='mb-2 overflow-x-auto'>{children}</pre>,
-                  strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
-                  a: ({ children, href }) => <a href={href} className='text-accent hover:underline' target='_blank' rel='noopener noreferrer'>{children}</a>
-                }}
-              >
-                {content}
-              </ReactMarkdown>
-            </div>
-          )
-        )}
-      </Card>
+            isUser ? (
+              <p className='whitespace-pre-wrap text-sm leading-relaxed'>{processedData.text}</p>
+            ) : (
+              <div className='prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed'>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ children }) => <p className='mb-2 last:mb-0'>{children}</p>,
+                    ul: ({ children }) => <ul className='mb-2 ml-4 list-disc'>{children}</ul>,
+                    ol: ({ children }) => <ol className='mb-2 ml-4 list-decimal'>{children}</ol>,
+                    li: ({ children }) => <li className='mb-1'>{children}</li>,
+                    code: ({ children, className }) => {
+                      const isInline = !className;
+                      return isInline ? (
+                        <code className='px-1.5 py-0.5 rounded bg-muted text-accent font-mono text-xs'>{children}</code>
+                      ) : (
+                        <code className='block p-2 rounded bg-muted font-mono text-xs overflow-x-auto'>{children}</code>
+                      );
+                    },
+                    pre: ({ children }) => <pre className='mb-2 overflow-x-auto'>{children}</pre>,
+                    strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
+                    a: ({ children, href }) => <a href={href} className='text-accent hover:underline' target='_blank' rel='noopener noreferrer'>{children}</a>,
+                    table: ({ children }) => (
+                      <TableWrapper>
+                        <div className='my-4 overflow-x-auto rounded-lg border border-border w-full'>
+                          <table className='w-full divide-y divide-border'>
+                            {children}
+                          </table>
+                        </div>
+                      </TableWrapper>
+                    ),
+                    thead: ({ children }) => (
+                      <thead className='bg-muted'>
+                        {children}
+                      </thead>
+                    ),
+                    tbody: ({ children }) => (
+                      <tbody className='divide-y divide-border'>
+                        {children}
+                      </tbody>
+                    ),
+                    tr: ({ children, ...props }) => {
+                      const isHeader = props.className?.includes('head');
+                      return (
+                        <tr className={cn(
+                          !isHeader && 'even:bg-muted/30',
+                          'transition-colors'
+                        )}>
+                          {children}
+                        </tr>
+                      );
+                    },
+                    th: ({ children }) => (
+                      <th className='px-6 py-3 text-left text-sm font-semibold'>
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children }) => (
+                      <td className='px-6 py-4 text-sm'>
+                        {children}
+                      </td>
+                    )
+                  }}
+                >
+                  {processedData.text}
+                </ReactMarkdown>
+              </div>
+            )
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
