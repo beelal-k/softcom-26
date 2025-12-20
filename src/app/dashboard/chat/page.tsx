@@ -19,7 +19,7 @@ import {
   onConnectionError,
   disconnectSocket
 } from '@/lib/socket';
-import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Copy, Download, Check } from 'lucide-react';
+import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Copy, Download, Check, FileDown } from 'lucide-react';
 import { useEffect, useRef, useState, FormEvent, DragEvent, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 
@@ -496,6 +496,42 @@ function TableWrapper({ children }: { children: React.ReactNode }) {
     document.body.removeChild(link);
   };
 
+  const handleDownloadPDF = async () => {
+    const { headers, rows } = extractTableData();
+    
+    // Dynamically import jsPDF
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text('Table Export', 14, 15);
+    
+    // Add table
+    autoTable(doc, {
+      head: [headers],
+      body: rows,
+      startY: 25,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [100, 100, 100],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 3
+      },
+      columnStyles: {},
+      margin: { top: 25 }
+    });
+    
+    // Save the PDF
+    doc.save(`table_${Date.now()}.pdf`);
+  };
+
   return (
     <div className='relative group' ref={tableRef}>
       <div className='absolute -top-10 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10'>
@@ -525,6 +561,15 @@ function TableWrapper({ children }: { children: React.ReactNode }) {
         >
           <Download className='h-3 w-3 mr-1' />
           CSV
+        </Button>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-8 px-2'
+          onClick={handleDownloadPDF}
+        >
+          <FileDown className='h-3 w-3 mr-1' />
+          PDF
         </Button>
       </div>
       {children}
