@@ -65,6 +65,21 @@ export default function SignInViewPage({ stars }: { stars: number }) {
     }
   };
 
+  // useEffect(() => {
+  //   const token = localStorage.getItem('token');
+  //   if (token) {
+  //     window.location.href = '/dashboard/overview';
+  //   }
+  // }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    if (token && user) {
+      window.location.href = '/dashboard/overview';
+    }
+  }, []);
+
   return (
     <div className='relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>
       <div className='bg-background text-foreground border-border relative hidden h-full flex-col p-10 lg:flex dark:border-r'>

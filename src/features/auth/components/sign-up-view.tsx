@@ -81,13 +81,9 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      // Prevent redirect loop - only redirect if not already redirecting
-      const isRedirecting = sessionStorage.getItem('isRedirecting');
-      if (!isRedirecting) {
-        sessionStorage.setItem('isRedirecting', 'true');
-        window.location.href = '/dashboard';
-      }
+    const user = localStorage.getItem('user');
+    if (token && user) {
+      window.location.href = '/dashboard/overview';
     }
   }, []);
 

@@ -135,6 +135,7 @@ export default function TeamMembersPage() {
           // Get members from team data
           if (teamData.members && Array.isArray(teamData.members)) {
             console.log('✅ Found members array:', teamData.members.length);
+<<<<<<< HEAD
 
             // Fetch full user details for each member
             const membersWithDetails = await Promise.all(
@@ -179,6 +180,20 @@ export default function TeamMembersPage() {
               membersWithDetails
             );
             setTeamMembers(membersWithDetails);
+=======
+            const members: TeamMember[] = teamData.members.map((member: any) => {
+              console.log('👤 Processing member:', member);
+              return {
+                id: member.userId?._id || member.userId || member.id || member._id,
+                name: member.userId?.name || member.userId?.username || member.name || 'Unknown',
+                email: member.userId?.email || member.email || '',
+                role: member.role || 'member',
+                joinedAt: member.joinedAt || new Date().toISOString()
+              };
+            });
+            console.log('✅ Processed members:', members);
+            setTeamMembers(members);
+>>>>>>> cb700addca1653887416a1531e15e737ba737b02
           } else {
             console.warn('❌ No members array found or not an array');
           }
@@ -235,7 +250,11 @@ export default function TeamMembersPage() {
       // Call both APIs simultaneously
       const [addResponse, inviteResponse] = await Promise.allSettled([
         // 1. Add member to team directly
+<<<<<<< HEAD
         apiClient.teams.addMember({
+=======
+        apiClient.teams.addMember( {
+>>>>>>> cb700addca1653887416a1531e15e737ba737b02
           teamId,
           organizationId: orgId,
           email: data.email,
