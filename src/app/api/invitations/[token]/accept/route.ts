@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { invitationService } from '@/lib/services/invitation-service';
-import { teamService, userService } from '@/lib/services';
+import { organizationService, teamService, userService } from '@/lib/services';
 import { authenticate } from '@/lib/middleware/auth';
 
 // POST /api/invitations/[token]/accept
@@ -69,4 +69,3 @@ export async function POST(
     );
   }
 }
-
