@@ -51,7 +51,7 @@ export default function AcceptInvitationPage({
           setMessage('Invitation accepted! Redirecting to dashboard...');
           // Clear any saved redirect
           localStorage.removeItem('redirect_after_login');
-          setTimeout(() => router.push('/dashboard/overview'), 3000);
+          setTimeout(() => router.push('/dashboard/overview'), 2000);
         } else {
           setStatus('error');
           setMessage(data.error || 'Failed to accept invitation');
