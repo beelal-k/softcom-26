@@ -48,6 +48,14 @@ export default function SignInViewPage({ stars }: { stars: number }) {
       // Set user cookie for middleware
       document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
 
+      // Check for pending invitation redirect
+      const redirectUrl = localStorage.getItem('redirect_after_login');
+      if (redirectUrl) {
+        localStorage.removeItem('redirect_after_login');
+        window.location.href = redirectUrl;
+        return;
+      }
+
       // Redirect to dashboard
       window.location.href = '/dashboard';
     } catch (err) {
@@ -56,13 +64,6 @@ export default function SignInViewPage({ stars }: { stars: number }) {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      window.location.href = '/dashboard/overview';
-    }
-  }, []);
 
   return (
     <div className='relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>

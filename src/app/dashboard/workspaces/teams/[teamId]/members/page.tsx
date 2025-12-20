@@ -2,12 +2,7 @@
 
 import PageContainer from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
@@ -44,7 +39,15 @@ import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { UserPlus, MoreVertical, Pencil, Trash2, Mail, Shield, Eye } from 'lucide-react';
+import {
+  UserPlus,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Mail,
+  Shield,
+  Eye
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 
@@ -110,7 +113,7 @@ export default function TeamMembersPage() {
         const teamResponse = await apiClient.teams.getById(teamId);
         if (teamResponse.success && teamResponse.data) {
           const teamData = teamResponse.data;
-          
+
           setTeam({
             id: teamData._id || teamData.id,
             name: teamData.name,
@@ -123,8 +126,8 @@ export default function TeamMembersPage() {
             if (orgResponse.success && orgResponse.data) {
               const currentUserId = currentUser?.id || currentUser?._id;
               setIsOwner(
-                orgResponse.data.owner === currentUserId || 
-                orgResponse.data.owner?._id === currentUserId
+                orgResponse.data.owner === currentUserId ||
+                  orgResponse.data.owner?._id === currentUserId
               );
             }
           }
@@ -132,39 +135,49 @@ export default function TeamMembersPage() {
           // Get members from team data
           if (teamData.members && Array.isArray(teamData.members)) {
             console.log('✅ Found members array:', teamData.members.length);
-            
+
             // Fetch full user details for each member
             const membersWithDetails = await Promise.all(
               teamData.members.map(async (member: any) => {
                 console.log('👤 Processing member:', member);
-                
+
                 const userId = member.userId?._id || member.userId;
-                let name = member.userId?.name || member.userId?.username || member.name;
+                let name =
+                  member.userId?.name || member.userId?.username || member.name;
                 const email = member.userId?.email || member.email || '';
-                
+
                 // If name is not available, fetch user details
                 if (!name && userId) {
                   try {
                     const userResponse = await apiClient.users.getById(userId);
                     if (userResponse.success && userResponse.data) {
-                      name = userResponse.data.name || userResponse.data.username || email.split('@')[0];
+                      name =
+                        userResponse.data.name ||
+                        userResponse.data.username ||
+                        email.split('@')[0];
                     }
                   } catch (error) {
                     console.warn('Failed to fetch user details for:', userId);
                   }
                 }
-                
+
                 return {
                   id: userId,
                   name: name || email.split('@')[0] || 'Unknown',
                   email: email,
                   role: member.role || 'member',
-                  joinedAt: member.addedAt || member.joinedAt || new Date().toISOString()
+                  joinedAt:
+                    member.addedAt ||
+                    member.joinedAt ||
+                    new Date().toISOString()
                 };
               })
             );
-            
-            console.log('✅ Processed members with details:', membersWithDetails);
+
+            console.log(
+              '✅ Processed members with details:',
+              membersWithDetails
+            );
             setTeamMembers(membersWithDetails);
           } else {
             console.warn('❌ No members array found or not an array');
@@ -206,8 +219,12 @@ export default function TeamMembersPage() {
     try {
       // Search for user by email
       const userResponse = await apiClient.users.search(data.email, 1);
-      
-      if (!userResponse.success || !userResponse.data || userResponse.data.length === 0) {
+
+      if (
+        !userResponse.success ||
+        !userResponse.data ||
+        userResponse.data.length === 0
+      ) {
         toast.error('User not found. Please ensure the user is registered.');
         return;
       }
@@ -218,8 +235,10 @@ export default function TeamMembersPage() {
       // Call both APIs simultaneously
       const [addResponse, inviteResponse] = await Promise.allSettled([
         // 1. Add member to team directly
-        apiClient.teams.addMember(teamId, {
-          userId,
+        apiClient.teams.addMember({
+          teamId,
+          organizationId: orgId,
+          email: data.email,
           role: data.role
         }),
         // 2. Send email invitation/notification
@@ -246,16 +265,22 @@ export default function TeamMembersPage() {
         addForm.reset();
 
         // Show success message based on both results
-        if (inviteResponse.status === 'fulfilled' && inviteResponse.value.success) {
+        if (
+          inviteResponse.status === 'fulfilled' &&
+          inviteResponse.value.success
+        ) {
           toast.success('Team member added and email notification sent!');
         } else {
-          toast.success('Team member added successfully (email notification failed)');
+          toast.success(
+            'Team member added successfully (email notification failed)'
+          );
           console.warn('Email notification failed:', inviteResponse);
         }
       } else {
-        const error = addResponse.status === 'fulfilled' 
-          ? addResponse.value.error 
-          : 'Failed to add team member';
+        const error =
+          addResponse.status === 'fulfilled'
+            ? addResponse.value.error
+            : 'Failed to add team member';
         toast.error(error || 'Failed to add team member');
       }
     } catch (error) {
@@ -300,10 +325,15 @@ export default function TeamMembersPage() {
     if (!selectedMember || !teamId) return;
 
     try {
-      const response = await apiClient.teams.removeMember(teamId, selectedMember.id);
+      const response = await apiClient.teams.removeMember(
+        teamId,
+        selectedMember.id
+      );
 
       if (response.success) {
-        setTeamMembers(teamMembers.filter((member) => member.id !== selectedMember.id));
+        setTeamMembers(
+          teamMembers.filter((member) => member.id !== selectedMember.id)
+        );
         setIsDeleteDialogOpen(false);
         setSelectedMember(null);
         toast.success(response.message || 'Team member removed successfully');
@@ -346,8 +376,14 @@ export default function TeamMembersPage() {
       >
         <div className='flex h-[400px] items-center justify-center'>
           <div className='text-center'>
-            <p className='text-muted-foreground mb-4'>Please select a team from the Teams page</p>
-            <Button onClick={() => router.push(`/dashboard/workspaces/teams?org=${orgId}`)}>
+            <p className='text-muted-foreground mb-4'>
+              Please select a team from the Teams page
+            </p>
+            <Button
+              onClick={() =>
+                router.push(`/dashboard/workspaces/teams?org=${orgId}`)
+              }
+            >
               Go to Teams
             </Button>
           </div>
@@ -362,10 +398,11 @@ export default function TeamMembersPage() {
       pageDescription='Manage your team members and their roles'
     >
       {!isOwner && (
-        <Alert className='mb-6 border-muted-foreground/20'>
+        <Alert className='border-muted-foreground/20 mb-6'>
           <Eye className='h-4 w-4' />
           <AlertDescription>
-            You have view-only access to this team. You can view members but cannot add, edit, or remove them.
+            You have view-only access to this team. You can view members but
+            cannot add, edit, or remove them.
           </AlertDescription>
         </Alert>
       )}
@@ -374,7 +411,8 @@ export default function TeamMembersPage() {
         <div>
           <h2 className='text-2xl font-bold'>{team?.name}</h2>
           <p className='text-muted-foreground text-sm'>
-            {teamMembers.length} team member{teamMembers.length !== 1 ? 's' : ''}
+            {teamMembers.length} team member
+            {teamMembers.length !== 1 ? 's' : ''}
           </p>
         </div>
         {isOwner && (
@@ -394,12 +432,12 @@ export default function TeamMembersPage() {
             <CardHeader>
               <div className='flex items-start justify-between'>
                 <div className='flex items-center gap-3'>
-                  <div className='flex h-10 w-10 items-center justify-center rounded-full bg-primary/10'>
-                    <Shield className='h-5 w-5 text-primary' />
+                  <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full'>
+                    <Shield className='text-primary h-5 w-5' />
                   </div>
                   <div>
                     <CardTitle className='text-base'>{member.name}</CardTitle>
-                    <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+                    <div className='text-muted-foreground flex items-center gap-1 text-xs'>
                       <Mail className='h-3 w-3' />
                       {member.email}
                     </div>
@@ -440,7 +478,7 @@ export default function TeamMembersPage() {
                 >
                   {member.role}
                 </span>
-                <span className='text-xs text-muted-foreground'>
+                <span className='text-muted-foreground text-xs'>
                   Joined {new Date(member.joinedAt).toLocaleDateString()}
                 </span>
               </div>
@@ -455,7 +493,8 @@ export default function TeamMembersPage() {
           <DialogHeader>
             <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
-              Add a registered user to your team and send them an email notification
+              Add a registered user to your team and send them an email
+              notification
             </DialogDescription>
           </DialogHeader>
           <Form
@@ -529,9 +568,7 @@ export default function TeamMembersPage() {
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
             <DialogTitle>Edit Team Member</DialogTitle>
-            <DialogDescription>
-              Update team member role
-            </DialogDescription>
+            <DialogDescription>Update team member role</DialogDescription>
           </DialogHeader>
           <Form
             form={editForm}
@@ -545,11 +582,7 @@ export default function TeamMembersPage() {
                 <FormItem>
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input
-                      type='email'
-                      {...field}
-                      disabled
-                    />
+                    <Input type='email' {...field} disabled />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

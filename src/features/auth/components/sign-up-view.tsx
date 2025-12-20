@@ -62,8 +62,16 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
       // Set user cookie for middleware
       document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
 
+      // Check for pending invitation redirect
+      const redirectUrl = localStorage.getItem('redirect_after_login');
+      if (redirectUrl) {
+        localStorage.removeItem('redirect_after_login');
+        window.location.href = redirectUrl;
+        return;
+      }
+
       // Redirect to dashboard
-      window.location.href = '/dashboard/overview';
+      window.location.href = '/dashboard';
     } catch (err) {
       setError('An error occurred. Please try again.');
     } finally {
@@ -74,7 +82,12 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      window.location.href = '/dashboard/overview';
+      // Prevent redirect loop - only redirect if not already redirecting
+      const isRedirecting = sessionStorage.getItem('isRedirecting');
+      if (!isRedirecting) {
+        sessionStorage.setItem('isRedirecting', 'true');
+        window.location.href = '/dashboard';
+      }
     }
   }, []);
 
