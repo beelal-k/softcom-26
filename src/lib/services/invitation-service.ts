@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 import { sendInvitationEmail } from './email-service';
 import { teamService, organizationService, userService } from './index';
 import { ITeam } from '../models/team';
+import { VALID_TEAM_ROLES, TeamRole } from './team-service';
 
 export const invitationService = {
   /**
@@ -18,6 +19,13 @@ export const invitationService = {
     invitedBy: string;
   }): Promise<IInvitation> {
     await connectDB();
+
+    // Validate role
+    if (!VALID_TEAM_ROLES.includes(data.role as TeamRole)) {
+      throw new Error(
+        `Invalid role. Must be one of: ${VALID_TEAM_ROLES.join(', ')}`
+      );
+    }
 
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date();
@@ -110,7 +118,7 @@ export const invitationService = {
   },
 
   /**
-   * Accept invitation
+   * Accept invitation (mark as accepted)
    */
   async accept(token: string): Promise<IInvitation | null> {
     await connectDB();
@@ -119,23 +127,6 @@ export const invitationService = {
       { $set: { status: 'accepted' } },
       { new: true }
     ).lean();
-    // Add the invited user to the team upon accepting the invitation.
-    if (
-      invitation &&
-      invitation.teamId &&
-      invitation.email &&
-      invitation.role
-    ) {
-      // Find the user who was invited (by email)
-      const invitedUser = await userService.getByEmail(invitation.email);
-      if (invitedUser && invitedUser._id) {
-        await teamService.addMember(invitation.teamId.toString(), {
-          userId: invitedUser._id.toString(),
-          role: invitation.role,
-          addedBy: invitation.invitedBy?.toString() || ''
-        });
-      }
-    }
 
     return invitation as IInvitation | null;
   },

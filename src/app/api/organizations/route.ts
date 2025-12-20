@@ -55,7 +55,10 @@ export async function POST(request: NextRequest) {
     const organization = await organizationService.create({
       name: body.name,
       description: body.description,
-      owner: userId
+      owner: userId,
+      industry: body.industry,
+      company_size: body.company_size,
+      website: body.website
     });
 
     return NextResponse.json(
@@ -74,4 +77,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

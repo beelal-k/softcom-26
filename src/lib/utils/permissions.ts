@@ -81,14 +81,14 @@ export async function isTeamMember(
 export async function getUserTeamRole(
   userId: string,
   teamId: string
-): Promise<string | null> {
+): Promise<'member' | 'manager' | null> {
   try {
     const team = await teamService.getById(teamId);
     if (!team) return null;
 
     const member = team.members.find((m) => m.userId.toString() === userId);
 
-    return member ? member.role : null;
+    return member ? (member.role as 'member' | 'manager') : null;
   } catch (error) {
     console.error('Get role error:', error);
     return null;
@@ -96,7 +96,7 @@ export async function getUserTeamRole(
 }
 
 /**
- * Check if user can manage team (owner or admin role)
+ * Check if user can manage team (admin=org owner or manager=team admin)
  */
 export async function canManageTeam(
   userId: string,
@@ -111,13 +111,90 @@ export async function canManageTeam(
       ? (team.organizationId as any)._id.toString()
       : team.organizationId.toString();
 
+    // Check if user is organization owner (admin role)
     const isOwner = await isOrganizationOwner(userId, orgId);
     if (isOwner) return true;
 
+    // Check if user is team manager
     const role = await getUserTeamRole(userId, teamId);
-    return role === 'admin' || role === 'owner';
+    return role === 'manager';
   } catch (error) {
     console.error('Can manage team error:', error);
     return false;
+  }
+}
+
+/**
+ * Check permission based on role hierarchy
+ * admin (org owner) > manager (team admin) > member (team member)
+ */
+export async function hasRolePermission(
+  userId: string,
+  organizationId: string,
+  requiredRole: 'admin' | 'manager' | 'member'
+): Promise<boolean> {
+  try {
+    // Check if user is org owner (admin)
+    const isOwner = await isOrganizationOwner(userId, organizationId);
+    if (isOwner) return true; // admin has all permissions
+
+    // Get user's teams in this organization
+    const teams = await teamService.getByUser(userId);
+    const orgTeams = teams.filter(
+      (team) => team.organizationId.toString() === organizationId
+    );
+
+    // Check if user has required role in any team
+    for (const team of orgTeams) {
+      const role = await getUserTeamRole(userId, team._id.toString());
+
+      if (requiredRole === 'member' && role) {
+        return true; // Any team member
+      }
+
+      if (requiredRole === 'manager' && role === 'manager') {
+        return true; // Team manager
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Role permission check error:', error);
+    return false;
+  }
+}
+
+/**
+ * Get user's highest role in organization
+ * Returns 'admin' if org owner, 'manager' if team manager, 'member' if team member, null if not in org
+ */
+export async function getUserOrgRole(
+  userId: string,
+  organizationId: string
+): Promise<'admin' | 'manager' | 'member' | null> {
+  try {
+    // Check if user is org owner (admin)
+    const isOwner = await isOrganizationOwner(userId, organizationId);
+    if (isOwner) return 'admin';
+
+    // Get user's teams in this organization
+    const teams = await teamService.getByUser(userId);
+    const orgTeams = teams.filter(
+      (team) => team.organizationId.toString() === organizationId
+    );
+
+    if (orgTeams.length === 0) return null;
+
+    // Check for manager role
+    for (const team of orgTeams) {
+      const role = await getUserTeamRole(userId, team._id.toString());
+      if (role === 'manager') return 'manager';
+    }
+
+    // User is at least a member
+    return 'member';
+  } catch (error) {
+    console.error('Get org role error:', error);
+    return null;
   }
 }

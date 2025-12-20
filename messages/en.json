@@ -1,0 +1,71 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "organizations": "Organizations",
+    "teams": "Teams",
+    "users": "Users",
+    "invitations": "Invitations",
+    "settings": "Settings",
+    "profile": "Profile",
+    "search": "Search",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "forgotPassword": "Forgot Password?",
+    "dontHaveAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "loginSuccess": "Login successful!",
+    "registerSuccess": "Registration successful!"
+  },
+  "organization": {
+    "createOrganization": "Create Organization",
+    "organizationName": "Organization Name",
+    "description": "Description",
+    "owner": "Owner",
+    "members": "Members",
+    "myOrganizations": "My Organizations",
+    "organizationCreated": "Organization created successfully",
+    "organizationUpdated": "Organization updated successfully",
+    "organizationDeleted": "Organization deleted successfully"
+  },
+  "team": {
+    "createTeam": "Create Team",
+    "teamName": "Team Name",
+    "addMember": "Add Member",
+    "removeMember": "Remove Member",
+    "teamMembers": "Team Members",
+    "permissions": "Permissions",
+    "role": "Role",
+    "myTeams": "My Teams",
+    "teamCreated": "Team created successfully",
+    "teamUpdated": "Team updated successfully"
+  },
+  "invitation": {
+    "sendInvitation": "Send Invitation",
+    "inviteUser": "Invite User",
+    "invitationSent": "Invitation sent successfully",
+    "acceptInvitation": "Accept Invitation",
+    "rejectInvitation": "Reject Invitation",
+    "invitationAccepted": "Invitation accepted successfully",
+    "invitationRejected": "Invitation rejected",
+    "pleaseLogin": "Please login first to accept this invitation",
+    "processing": "Processing Invitation...",
+    "redirecting": "Redirecting to dashboard..."
+  }
+}

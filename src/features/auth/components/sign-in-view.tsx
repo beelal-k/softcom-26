@@ -1,12 +1,18 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { InteractiveGridPattern } from './interactive-grid';
 
 export default function SignInViewPage({ stars }: { stars: number }) {
@@ -14,7 +20,6 @@ export default function SignInViewPage({ stars }: { stars: number }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -39,10 +44,10 @@ export default function SignInViewPage({ stars }: { stars: number }) {
       // Store token and user data
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
+
       // Set user cookie for middleware
       document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
-      
+
       // Redirect to dashboard
       window.location.href = '/dashboard';
     } catch (err) {
@@ -52,9 +57,16 @@ export default function SignInViewPage({ stars }: { stars: number }) {
     }
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      window.location.href = '/dashboard/overview';
+    }
+  }, []);
+
   return (
     <div className='relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>
-      <div className='bg-background relative hidden h-full flex-col p-10 text-foreground lg:flex dark:border-r border-border'>
+      <div className='bg-background text-foreground border-border relative hidden h-full flex-col p-10 lg:flex dark:border-r'>
         <div className='absolute inset-0 bg-black' />
         <div className='relative z-20 flex items-center text-lg font-medium'>
           <div className='flex items-center gap-2'>
@@ -84,10 +96,12 @@ export default function SignInViewPage({ stars }: { stars: number }) {
         <div className='relative z-20 mt-auto'>
           <blockquote className='space-y-2'>
             <p className='text-lg'>
-              &ldquo;This platform has revolutionized the way we manage our projects 
-              and collaborate with our team members.&rdquo;
+              &ldquo;This platform has revolutionized the way we manage our
+              projects and collaborate with our team members.&rdquo;
             </p>
-            <footer className='text-sm text-muted-foreground'>Sarah Johnson, CEO</footer>
+            <footer className='text-muted-foreground text-sm'>
+              Sarah Johnson, CEO
+            </footer>
           </blockquote>
         </div>
       </div>
@@ -103,7 +117,7 @@ export default function SignInViewPage({ stars }: { stars: number }) {
             <CardContent>
               <form onSubmit={handleSubmit} className='space-y-4'>
                 {error && (
-                  <div className='rounded-lg bg-destructive/10 p-3 text-sm text-destructive'>
+                  <div className='bg-destructive/10 text-destructive rounded-lg p-3 text-sm'>
                     {error}
                   </div>
                 )}
@@ -123,7 +137,7 @@ export default function SignInViewPage({ stars }: { stars: number }) {
                     <Label htmlFor='password'>Password</Label>
                     <Link
                       href='/auth/forgot-password'
-                      className='text-sm text-accent hover:underline'
+                      className='text-accent text-sm hover:underline'
                     >
                       Forgot password?
                     </Link>
@@ -137,9 +151,9 @@ export default function SignInViewPage({ stars }: { stars: number }) {
                     required
                   />
                 </div>
-                <Button 
-                  type='submit' 
-                  className='w-full bg-accent text-accent-foreground hover:bg-accent/90'
+                <Button
+                  type='submit'
+                  className='bg-accent text-accent-foreground hover:bg-accent/90 w-full'
                   disabled={loading}
                 >
                   {loading ? 'Signing in...' : 'Sign In'}
@@ -147,7 +161,10 @@ export default function SignInViewPage({ stars }: { stars: number }) {
               </form>
               <div className='mt-6 text-center text-sm'>
                 Don&apos;t have an account?{' '}
-                <Link href='/auth/sign-up' className='text-accent hover:underline font-medium'>
+                <Link
+                  href='/auth/sign-up'
+                  className='text-accent font-medium hover:underline'
+                >
                   Sign Up
                 </Link>
               </div>

@@ -1,0 +1,72 @@
+{
+  "common": {
+    "welcome": "خوش آمدید",
+    "login": "لاگ ان",
+    "register": "رجسٹر",
+    "logout": "لاگ آؤٹ",
+    "dashboard": "ڈیش بورڈ",
+    "organizations": "تنظیمیں",
+    "teams": "ٹیمیں",
+    "users": "صارفین",
+    "invitations": "دعوت نامے",
+    "settings": "ترتیبات",
+    "profile": "پروفائل",
+    "search": "تلاش",
+    "save": "محفوظ کریں",
+    "cancel": "منسوخ کریں",
+    "delete": "حذف کریں",
+    "edit": "ترمیم",
+    "create": "بنائیں",
+    "loading": "لوڈ ہو رہا ہے...",
+    "success": "کامیابی",
+    "error": "خرابی"
+  },
+  "auth": {
+    "signIn": "سائن ان",
+    "signUp": "سائن اپ",
+    "email": "ای میل",
+    "password": "پاس ورڈ",
+    "username": "صارف نام",
+    "forgotPassword": "پاس ورڈ بھول گئے؟",
+    "dontHaveAccount": "اکاؤنٹ نہیں ہے؟",
+    "alreadyHaveAccount": "پہلے سے اکاؤنٹ ہے؟",
+    "loginSuccess": "لاگ ان کامیاب!",
+    "registerSuccess": "رجسٹریشن کامیاب!"
+  },
+  "organization": {
+    "createOrganization": "تنظیم بنائیں",
+    "organizationName": "تنظیم کا نام",
+    "description": "تفصیل",
+    "owner": "مالک",
+    "members": "اراکین",
+    "myOrganizations": "میری تنظیمیں",
+    "organizationCreated": "تنظیم کامیابی سے بنائی گئی",
+    "organizationUpdated": "تنظیم اپ ڈیٹ ہو گئی",
+    "organizationDeleted": "تنظیم حذف ہو گئی"
+  },
+  "team": {
+    "createTeam": "ٹیم بنائیں",
+    "teamName": "ٹیم کا نام",
+    "addMember": "رکن شامل کریں",
+    "removeMember": "رکن ہٹائیں",
+    "teamMembers": "ٹیم کے اراکین",
+    "permissions": "اجازتیں",
+    "role": "کردار",
+    "myTeams": "میری ٹیمیں",
+    "teamCreated": "ٹیم کامیابی سے بنائی گئی",
+    "teamUpdated": "ٹیم اپ ڈیٹ ہو گئی"
+  },
+  "invitation": {
+    "sendInvitation": "دعوت نامہ بھیجیں",
+    "inviteUser": "صارف کو مدعو کریں",
+    "invitationSent": "دعوت نامہ بھیج دیا گیا",
+    "acceptInvitation": "دعوت قبول کریں",
+    "rejectInvitation": "دعوت مسترد کریں",
+    "invitationAccepted": "دعوت قبول کر لی گئی",
+    "invitationRejected": "دعوت مسترد کر دی گئی",
+    "pleaseLogin": "براہ کرم پہلے لاگ ان کریں",
+    "processing": "دعوت پر کارروائی ہو رہی ہے...",
+    "redirecting": "ڈیش بورڈ کی طرف جا رہے ہیں..."
+  }
+}
+

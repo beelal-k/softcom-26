@@ -560,15 +560,20 @@ X
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder='Ask me anything...'
-              className='pl-12 pr-12 h-12 text-base'
+              placeholder={isLoading ? 'AI is responding...' : 'Ask me anything...'}
+              className={cn('pl-12 pr-12 h-12 text-base', isLoading && 'cursor-not-allowed opacity-60')}
               disabled={isLoading}
             />
             <Button
               type='submit'
               size='icon'
               disabled={(!input.trim() && !uploadedFile) || isLoading || !isConnected}
-              className='absolute right-1 top-1 h-10 w-10 bg-accent text-accent-foreground hover:bg-accent/90'
+              className={cn(
+                'absolute right-1 top-1 h-10 w-10',
+                isLoading 
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                  : 'bg-accent text-accent-foreground hover:bg-accent/90'
+              )}
             >
               <Send className='h-4 w-4' />
             </Button>
