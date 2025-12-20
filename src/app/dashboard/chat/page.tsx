@@ -19,7 +19,7 @@ import {
   onConnectionError,
   disconnectSocket
 } from '@/lib/socket';
-import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Cloud, Copy, Download, Check  } from 'lucide-react';
+import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Cloud, Copy, Download, Check, FileDown, FileIcon } from 'lucide-react';
 import { useEffect, useRef, useState, FormEvent, DragEvent, useMemo, Suspense } from 'react';
 import { AIChart } from '@/components/ui/ai-chart';
 import { 
@@ -28,6 +28,12 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useSearchParams } from 'next/navigation';
 
 interface ChatMessage {
@@ -53,9 +59,13 @@ function ChatContent() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDriveDialogOpen, setIsDriveDialogOpen] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<any[]>([]);
+  const [isLoadingDriveFiles, setIsLoadingDriveFiles] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
@@ -118,6 +128,24 @@ function ChatContent() {
 
     initSocket();
 
+    // Check Drive Connection
+    const checkDriveStatus = async () => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                const response = await fetch(`/api/user/google-status?email=${user.email}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setIsDriveConnected(data.isConnected);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to check Drive status', e);
+        }
+    };
+    checkDriveStatus();
+
     // Cleanup on unmount
     return () => {
       disconnectSocket();
@@ -129,6 +157,52 @@ function ChatContent() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const fetchDriveFiles = async () => {
+    try {
+        setIsLoadingDriveFiles(true);
+        // We'll use the existing agent tool indirectly or a new endpoint if needed.
+        // But for now, since we don't have a direct list-files endpoint in Next.js (it's in Python BE),
+        // we might need to add one or use the socket to request it? 
+        // Actually, let's add a quick endpoint in main.py or just use the agent to "list my files" 
+        // But the user wants a picker.
+        // Let's create a temporary direct fetch to the Python BE for this since we have the token in DB.
+        // Ideally we should proxy this through Next.js API.
+        
+        // Creating a simple Next.js API route to proxy to Python BE would be best practice, 
+        // but for speed let's fetch from client if CORS allows or add a proxy route.
+        // Let's assume we can add a proxy route in Next.js.
+        
+        // Wait, we already have python BE running on 8000. Let's add a list endpoint there for the frontend to consume directly.
+        // OR better, let's use the tool we just made! 
+        // But tool is for agent. 
+        
+        // Let's add a simple endpoint in main.py to list files for the UI.
+        const userStr = localStorage.getItem('user');
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        
+        const response = await fetch(`${API_URL}/google/files?email=${user.email}`);
+        if (response.ok) {
+            const data = await response.json();
+            setDriveFiles(data.files || []);
+        }
+    } catch (e) {
+        console.error('Failed to fetch drive files', e);
+    } finally {
+        setIsLoadingDriveFiles(false);
+    }
+  };
+
+  const handleDriveFileSelect = (file: any) => {
+    // Send a message to the agent to analyze this file
+    const prompt = `Analyze the file "${file.name}" (ID: ${file.id}) from my Google Drive.`;
+    setInput(prompt);
+    setIsDriveDialogOpen(false);
+    // Optional: auto-submit
+    // handleSubmit(new Event('submit') as any); 
+  };
 
   const handleFileUpload = async (file: File) => {
     console.log('Starting upload for:', file.name, file.type, file.size);
@@ -407,37 +481,82 @@ X
                   <Upload className="mr-2 h-4 w-4" />
                   <span>Upload File</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={async () => {
-                  try {
-                    const userStr = localStorage.getItem('user');
-                    let userEmail = '';
-                    if (userStr) {
-                       const user = JSON.parse(userStr);
-                       userEmail = user.email;
-                    }
-                    
-                    if (!userEmail) {
-                        alert('User email not found. Please log in again.');
-                        return;
-                    }
+                
+                {isDriveConnected ? (
+                    <DropdownMenuItem onClick={() => {
+                        setIsDriveDialogOpen(true);
+                        fetchDriveFiles();
+                    }}>
+                        <Cloud className="mr-2 h-4 w-4" />
+                        <span>Select from Drive</span>
+                    </DropdownMenuItem>
+                ) : (
+                    <DropdownMenuItem onClick={async () => {
+                        try {
+                            const userStr = localStorage.getItem('user');
+                            let userEmail = '';
+                            if (userStr) {
+                                const user = JSON.parse(userStr);
+                                userEmail = user.email;
+                            }
+                            
+                            if (!userEmail) {
+                                alert('User email not found. Please log in again.');
+                                return;
+                            }
 
-                    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-                    const response = await fetch(`${API_URL}/google/login?email=${encodeURIComponent(userEmail)}`);
-                    const data = await response.json();
-                    
-                    if (data.url) {
-                        window.location.href = data.url;
-                    }
-                  } catch (e) {
-                    console.error('Failed to initiate Google Drive connection:', e);
-                    alert('Failed to connect to Google Drive. Please try again.');
-                  }
-                }}>
-                  <Cloud className="mr-2 h-4 w-4" />
-                  <span>Connect Google Drive</span>
-                </DropdownMenuItem>
+                            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                            const response = await fetch(`${API_URL}/google/login?email=${encodeURIComponent(userEmail)}`);
+                            const data = await response.json();
+                            
+                            if (data.url) {
+                                window.location.href = data.url;
+                            }
+                        } catch (e) {
+                            console.error('Failed to initiate Google Drive connection:', e);
+                            alert('Failed to connect to Google Drive. Please try again.');
+                        }
+                    }}>
+                        <Cloud className="mr-2 h-4 w-4" />
+                        <span>Connect Google Drive</span>
+                    </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Dialog open={isDriveDialogOpen} onOpenChange={setIsDriveDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Select file from Google Drive</DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[300px] overflow-y-auto space-y-2 mt-4">
+                        {isLoadingDriveFiles ? (
+                            <div className="flex justify-center p-4">
+                                <div className='h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin' />
+                            </div>
+                        ) : driveFiles.length > 0 ? (
+                            driveFiles.map((file: any) => (
+                                <div 
+                                    key={file.id} 
+                                    className="flex items-center gap-3 p-3 rounded-md hover:bg-accent/10 cursor-pointer border border-transparent hover:border-accent/20 transition-all"
+                                    onClick={() => handleDriveFileSelect(file)}
+                                >
+                                    <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded text-blue-600 dark:text-blue-400">
+                                        <FileIcon className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{file.name}</p>
+                                        <p className="text-xs text-muted-foreground">ID: {file.id}</p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-center text-sm text-muted-foreground p-4">No files found.</p>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -541,6 +660,42 @@ function TableWrapper({ children }: { children: React.ReactNode }) {
     document.body.removeChild(link);
   };
 
+  const handleDownloadPDF = async () => {
+    const { headers, rows } = extractTableData();
+    
+    // Dynamically import jsPDF
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text('Table Export', 14, 15);
+    
+    // Add table
+    autoTable(doc, {
+      head: [headers],
+      body: rows,
+      startY: 25,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [100, 100, 100],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 3
+      },
+      columnStyles: {},
+      margin: { top: 25 }
+    });
+    
+    // Save the PDF
+    doc.save(`table_${Date.now()}.pdf`);
+  };
+
   return (
     <div className='relative group' ref={tableRef}>
       <div className='absolute -top-10 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10'>
@@ -570,6 +725,15 @@ function TableWrapper({ children }: { children: React.ReactNode }) {
         >
           <Download className='h-3 w-3 mr-1' />
           CSV
+        </Button>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-8 px-2'
+          onClick={handleDownloadPDF}
+        >
+          <FileDown className='h-3 w-3 mr-1' />
+          PDF
         </Button>
       </div>
       {children}
@@ -714,6 +878,12 @@ function ChatMessage({
             )
           )}
         </Card>
+
+        {processedData.chart && (
+          <div className="w-full mt-2">
+            <AIChart data={processedData.chart} />
+          </div>
+        )}
       </div>
     </div>
   );
