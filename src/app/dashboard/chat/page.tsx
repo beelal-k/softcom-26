@@ -20,7 +20,8 @@ import {
   disconnectSocket
 } from '@/lib/socket';
 import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload } from 'lucide-react';
-import { useEffect, useRef, useState, FormEvent, DragEvent } from 'react';
+import { useEffect, useRef, useState, FormEvent, DragEvent, useMemo } from 'react';
+import { AIChart } from '@/components/ui/ai-chart';
 
 interface ChatMessage {
   id: string;
@@ -28,6 +29,7 @@ interface ChatMessage {
   content: string;
   fileUrl?: string;
   fileName?: string;
+  chartData?: any;
 }
 
 export default function ChatPage() {
@@ -384,7 +386,7 @@ X
           </form>
           <p className='mt-2 text-center text-xs text-muted-foreground'>
             {isConnected ? (
-              <>AI Assistant can make mistakes. Consider checking important information.</>
+              <></>
             ) : (
               <>Connecting to AI server...</>
             )}
@@ -399,13 +401,34 @@ X
 function ChatMessage({
   role,
   content,
+  chartData,
   isLoading = false
 }: {
   role: 'user' | 'assistant';
   content: string;
+  chartData?: any;
   isLoading?: boolean;
 }) {
   const isUser = role === 'user';
+
+  const processedData = useMemo(() => {
+    if (chartData) return { text: content, chart: chartData };
+    
+    if (content.includes('CHART_DATA_START')) {
+      try {
+        const parts = content.split('CHART_DATA_START');
+        const textBefore = parts[0];
+        const chartPart = parts[1].split('CHART_DATA_END')[0];
+        const textAfter = parts[1].split('CHART_DATA_END')[1] || '';
+        const chartJson = JSON.parse(chartPart);
+        return { text: textBefore + textAfter, chart: chartJson };
+      } catch (e) {
+        console.error('Failed to parse chart data', e);
+        return { text: content, chart: null };
+      }
+    }
+    return { text: content, chart: null };
+  }, [content, chartData]);
 
   return (
     <div
@@ -423,54 +446,62 @@ function ChatMessage({
           )}
         </AvatarFallback>
       </Avatar>
-      <Card
-        className={cn(
-          'max-w-[80%] px-4 py-3',
-          isUser
-            ? 'bg-accent text-accent-foreground'
-            : 'bg-card'
-        )}
-      >
-        {isLoading ? (
-          <div className='flex items-center gap-2'>
-            <div className='flex gap-1'>
-              <span className='animate-bounce delay-0 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '0ms' }}></span>
-              <span className='animate-bounce delay-100 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '150ms' }}></span>
-              <span className='animate-bounce delay-200 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '300ms' }}></span>
+      <div className={cn("flex flex-col gap-2 max-w-[80%]", isUser && "items-end")}>
+        <Card
+          className={cn(
+            'px-4 py-3',
+            isUser
+              ? 'bg-accent text-accent-foreground'
+              : 'bg-card'
+          )}
+        >
+          {isLoading ? (
+            <div className='flex items-center gap-2'>
+              <div className='flex gap-1'>
+                <span className='animate-bounce delay-0 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '0ms' }}></span>
+                <span className='animate-bounce delay-100 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '150ms' }}></span>
+                <span className='animate-bounce delay-200 h-2 w-2 rounded-full bg-muted-foreground' style={{ animationDelay: '300ms' }}></span>
+              </div>
+              <span className='text-sm text-muted-foreground'>Thinking...</span>
             </div>
-            <span className='text-sm text-muted-foreground'>Thinking...</span>
-          </div>
-        ) : (
-          isUser ? (
-            <p className='whitespace-pre-wrap text-sm leading-relaxed'>{content}</p>
           ) : (
-            <div className='prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed'>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  p: ({ children }) => <p className='mb-2 last:mb-0'>{children}</p>,
-                  ul: ({ children }) => <ul className='mb-2 ml-4 list-disc'>{children}</ul>,
-                  ol: ({ children }) => <ol className='mb-2 ml-4 list-decimal'>{children}</ol>,
-                  li: ({ children }) => <li className='mb-1'>{children}</li>,
-                  code: ({ children, className }) => {
-                    const isInline = !className;
-                    return isInline ? (
-                      <code className='px-1.5 py-0.5 rounded bg-muted text-accent font-mono text-xs'>{children}</code>
-                    ) : (
-                      <code className='block p-2 rounded bg-muted font-mono text-xs overflow-x-auto'>{children}</code>
-                    );
-                  },
-                  pre: ({ children }) => <pre className='mb-2 overflow-x-auto'>{children}</pre>,
-                  strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
-                  a: ({ children, href }) => <a href={href} className='text-accent hover:underline' target='_blank' rel='noopener noreferrer'>{children}</a>
-                }}
-              >
-                {content}
-              </ReactMarkdown>
-            </div>
-          )
+            isUser ? (
+              <p className='whitespace-pre-wrap text-sm leading-relaxed'>{processedData.text}</p>
+            ) : (
+              <div className='prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed'>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ children }) => <p className='mb-2 last:mb-0'>{children}</p>,
+                    ul: ({ children }) => <ul className='mb-2 ml-4 list-disc'>{children}</ul>,
+                    ol: ({ children }) => <ol className='mb-2 ml-4 list-decimal'>{children}</ol>,
+                    li: ({ children }) => <li className='mb-1'>{children}</li>,
+                    code: ({ children, className }) => {
+                      const isInline = !className;
+                      return isInline ? (
+                        <code className='px-1.5 py-0.5 rounded bg-muted text-accent font-mono text-xs'>{children}</code>
+                      ) : (
+                        <code className='block p-2 rounded bg-muted font-mono text-xs overflow-x-auto'>{children}</code>
+                      );
+                    },
+                    pre: ({ children }) => <pre className='mb-2 overflow-x-auto'>{children}</pre>,
+                    strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
+                    a: ({ children, href }) => <a href={href} className='text-accent hover:underline' target='_blank' rel='noopener noreferrer'>{children}</a>
+                  }}
+                >
+                  {processedData.text}
+                </ReactMarkdown>
+              </div>
+            )
+          )}
+        </Card>
+        
+        {processedData.chart && (
+          <div className="w-full mt-2">
+            <AIChart data={processedData.chart} />
+          </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
