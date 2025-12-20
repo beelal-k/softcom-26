@@ -52,6 +52,9 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
       // Store user data
       localStorage.setItem('user', JSON.stringify(data.user));
       
+      // Set user cookie for middleware
+      document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+      
       // Redirect to dashboard
       window.location.href = '/dashboard';
     } catch (err) {

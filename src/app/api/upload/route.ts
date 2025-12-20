@@ -11,12 +11,19 @@ cloudinary.config({
 export async function POST(request: NextRequest) {
   try {
     console.log('Upload API called');
-    
+
     // Check Cloudinary config
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    if (
+      !process.env.CLOUDINARY_CLOUD_NAME ||
+      !process.env.CLOUDINARY_API_KEY ||
+      !process.env.CLOUDINARY_API_SECRET
+    ) {
       console.error('Cloudinary credentials missing');
       return NextResponse.json(
-        { error: 'Cloudinary not configured. Please add credentials to .env.local' },
+        {
+          error:
+            'Cloudinary not configured. Please add credentials to .env.local'
+        },
         { status: 500 }
       );
     }
@@ -26,10 +33,7 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       console.error('No file in request');
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
     console.log('Processing file:', file.name, file.type, file.size);
@@ -40,12 +44,30 @@ export async function POST(request: NextRequest) {
 
     console.log('Uploading to Cloudinary...');
 
+    // Determine resource type based on file type
+    let resourceType: 'image' | 'video' | 'raw' | 'auto' = 'auto';
+    let deliveryType = 'upload';
+
+    if (file.type.startsWith('image/')) {
+      resourceType = 'image';
+    } else if (file.type === 'application/pdf') {
+      resourceType = 'image'; // PDFs work better as image type for viewing
+    } else {
+      // For other files (Excel, CSV, etc), use raw but with attachment delivery
+      resourceType = 'raw';
+      deliveryType = 'upload';
+    }
+
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'chat-uploads',
-          resource_type: 'auto'
+          resource_type: resourceType,
+          type: deliveryType as any,
+          use_filename: true,
+          unique_filename: true,
+          flags: 'attachment' // Force download instead of inline display for raw files
         },
         (error, result) => {
           if (error) {
@@ -63,6 +85,7 @@ export async function POST(request: NextRequest) {
 
     const uploadResult = result as any;
 
+    // Return the secure_url which is always accessible
     return NextResponse.json({
       url: uploadResult.secure_url,
       public_id: uploadResult.public_id,
@@ -72,7 +95,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to upload file' },
+      {
+        error: error instanceof Error ? error.message : 'Failed to upload file'
+      },
       { status: 500 }
     );
   }

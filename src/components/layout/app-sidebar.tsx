@@ -64,6 +64,9 @@ export default function AppSidebar() {
     // Clear user data from localStorage
     localStorage.removeItem('user');
     
+    // Clear user cookie
+    document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    
     // Redirect to sign-in page
     router.push('/auth/sign-in');
   };

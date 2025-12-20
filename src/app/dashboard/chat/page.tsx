@@ -124,7 +124,7 @@ export default function ChatPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-
+X
       console.log('Sending upload request...');
       const response = await fetch('/api/upload', {
         method: 'POST',

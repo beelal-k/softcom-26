@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, ChevronsUpDown, GalleryVerticalEnd, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, ChevronsUpDown, GalleryVerticalEnd, Plus, User } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -25,77 +25,110 @@ import {
 export function OrgSwitcher() {
   const router = useRouter();
   const { isMobile, state } = useSidebar();
+  const [userData, setUserData] = useState<any>(null);
+
+  // Get user data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        setUserData(JSON.parse(userStr));
+      } catch (error) {
+        console.error('Failed to parse user data:', error);
+      }
+    }
+  }, []);
 
   // ---------------------------
   // DUMMY ORGANIZATIONS (Replace later)
   // ---------------------------
-  const dummyMemberships = [
-    {
-      id: '1',
-      organization: {
-        id: 'org1',
-        name: 'Sheikh Sahab',
-        imageUrl: '',
-        hasImage: false
-      },
-      role: 'Owner'
-    },
-    {
-      id: '2',
-      organization: {
-        id: 'org2',
-        name: 'TecnoFuzion',
-        imageUrl: '',
-        hasImage: false
-      },
-      role: 'Admin'
-    }
+  const dummyMemberships: Array<{
+    id: string;
+    organization: {
+      id: string;
+      name: string;
+      imageUrl: string;
+      hasImage: boolean;
+    };
+    role: string;
+  }> = [
+    // Empty array - change this to [] to test no organization state
+    // Or fetch from API based on userData
   ];
 
   // ---------------------------
   // ACTIVE ORG HANDLING
   // ---------------------------
-  const [activeOrgId, setActiveOrgId] = useState(
-    dummyMemberships[0].organization.id
+  const [activeOrgId, setActiveOrgId] = useState<string | undefined>(
+    dummyMemberships[0]?.organization.id
   );
 
   const activeOrganization =
     dummyMemberships.find((m) => m.organization.id === activeOrgId)
       ?.organization || dummyMemberships[0]?.organization;
 
-  // No organizations (rare, but handled)
+  // No organizations - show user name and "No organisation"
   if (!dummyMemberships || dummyMemberships.length === 0) {
+    const userName = userData?.username || userData?.fullName || 'User';
+    console.log('No organizations found for user:', userName);
+    
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            size='lg'
-            onClick={() => router.push('/dashboard/workspaces')}
-            className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
-          >
-            <div className='bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg'>
-              <Plus className='size-4' />
-            </div>
-            <div
-              className={`grid flex-1 text-left text-sm leading-tight transition-all duration-200 ease-in-out ${
-                state === 'collapsed'
-                  ? 'invisible max-w-0 overflow-hidden opacity-0'
-                  : 'visible max-w-full opacity-100'
-              }`}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton
+                size='lg'
+                className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+              >
+                <div className='bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg'>
+                  <User className='size-4' />
+                </div>
+                <div
+                  className={`grid flex-1 text-left text-sm leading-tight transition-all duration-200 ease-in-out ${
+                    state === 'collapsed'
+                      ? 'invisible max-w-0 overflow-hidden opacity-0'
+                      : 'visible max-w-full opacity-100'
+                  }`}
+                >
+                  <span className='truncate font-medium'>{userName}</span>
+                  <span className='text-muted-foreground truncate text-xs'>
+                    No organisation
+                  </span>
+                </div>
+                <ChevronsUpDown
+                  className={`ml-auto transition-all duration-200 ease-in-out ${
+                    state === 'collapsed'
+                      ? 'invisible max-w-0 opacity-0'
+                      : 'visible max-w-full opacity-100'
+                  }`}
+                />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              className='w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg'
+              align='start'
+              side={isMobile ? 'bottom' : 'right'}
+              sideOffset={4}
             >
-              <span className='truncate font-medium'>Create organization</span>
-              <span className='text-muted-foreground truncate text-xs'>
-                Get started
-              </span>
-            </div>
-            <ChevronsUpDown
-              className={`ml-auto transition-all duration-200 ease-in-out ${
-                state === 'collapsed'
-                  ? 'invisible max-w-0 opacity-0'
-                  : 'visible max-w-full opacity-100'
-              }`}
-            />
-          </SidebarMenuButton>
+              <DropdownMenuLabel className='text-muted-foreground text-xs'>
+                Organizations
+              </DropdownMenuLabel>
+              
+              <DropdownMenuItem
+                className='gap-2 p-2'
+                onClick={() => router.push('/dashboard/workspaces')}
+              >
+                <div className='flex size-6 items-center justify-center rounded-md border bg-transparent'>
+                  <Plus className='size-4' />
+                </div>
+                <div className='text-muted-foreground font-medium'>
+                  Create organisation
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
     );
