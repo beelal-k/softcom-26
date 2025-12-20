@@ -104,7 +104,7 @@ export function AreaGraph() {
                   labelFormatter={(value) => {
                     return value;
                   }}
-                  formatter={(value) => `$${Number(value).toLocaleString()}`}
+                  formatter={(value) => `PKR ${Number(value).toLocaleString()}`}
                 />
               }
             />

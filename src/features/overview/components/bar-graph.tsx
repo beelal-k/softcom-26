@@ -136,9 +136,9 @@ export function BarGraph({ chartData = [], overall }: BarGraphProps) {
                   {chartConfig[chart].label}
                 </span>
                 <span className='text-lg leading-none font-bold sm:text-3xl'>
-                  {new Intl.NumberFormat('en-US', {
+                  {new Intl.NumberFormat('en-PK', {
                     style: 'currency',
-                    currency: 'USD',
+                    currency: 'PKR',
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 1,
                     notation: 'compact'

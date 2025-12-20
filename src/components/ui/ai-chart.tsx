@@ -7,6 +7,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
   Pie,
@@ -33,6 +34,17 @@ import {
 interface AIChartProps {
   data: any;
 }
+
+const COLORS_HEX = [
+  '#ea580c', // orange-600
+  '#f97316', // orange-500
+  '#fb923c', // orange-400
+  '#fdba74', // orange-300
+  '#ffedd5', // orange-100
+  '#fed7aa', // orange-200
+  '#c2410c', // orange-700
+  '#9a3412', // orange-800
+];
 
 export function AIChart({ data }: AIChartProps) {
   const { type, title, description, xAxis, yAxis, data: chartData } = data;
@@ -136,6 +148,27 @@ export function AIChart({ data }: AIChartProps) {
               fillOpacity={0.2}
             />
           </AreaChart>
+        );
+      case 'pie':
+        const nameKey = xAxis || Object.keys(chartData[0] || {}).find(k => k !== (yAxis || 'value')) || 'name';
+        return (
+          <PieChart>
+            <ChartTooltip content={<ChartTooltipContent hideLabel />} cursor={false} />
+            <Pie
+              data={chartData}
+              dataKey={yAxis || 'value'} 
+              nameKey={nameKey}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              strokeWidth={2}
+            >
+              {chartData.map((entry: any, index: number) => (
+                <Cell key={`cell-${index}`} fill={COLORS_HEX[index % COLORS_HEX.length]} stroke="hsl(var(--background))" />
+              ))}
+            </Pie>
+          </PieChart>
         );
       default:
         return (

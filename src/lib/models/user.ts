@@ -16,6 +16,9 @@ const UserSchema = new mongoose.Schema({
   qb_refresh_token: String,
   qb_access_token_expires_at: Date,
   qb_refresh_token_expires_at: Date,
+  google_drive_access_token: String,
+  google_drive_refresh_token: String,
+  google_drive_token_expires_at: Date,
 }, {
   timestamps: true,
   collection: 'users' // Explicitly match the backend collection name
