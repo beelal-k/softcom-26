@@ -155,9 +155,9 @@ export default function OverViewLayout({
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-PK', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PKR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
@@ -211,7 +211,7 @@ export default function OverViewLayout({
                 <Skeleton className='h-12 w-32 mt-2' />
               ) : (
                 <CardTitle className='text-4xl font-bold text-accent mt-2'>
-                  {stats ? formatCurrency(stats.revenue_this_month.value) : '$0'}
+                  {stats ? formatCurrency(stats.revenue_this_month.value) : 'PKR 0'}
                 </CardTitle>
               )}
               <CardAction>
@@ -251,7 +251,7 @@ export default function OverViewLayout({
                 <Skeleton className='h-12 w-32 mt-2' />
               ) : (
                 <CardTitle className='text-4xl font-bold mt-2'>
-                  {stats ? formatCurrency(stats.expenses_this_month.value) : '$0'}
+                  {stats ? formatCurrency(stats.expenses_this_month.value) : 'PKR 0'}
                 </CardTitle>
               )}
               <CardAction>
@@ -295,7 +295,7 @@ export default function OverViewLayout({
                 <Skeleton className='h-12 w-32 mt-2' />
               ) : (
                 <CardTitle className='text-4xl font-bold mt-2'>
-                  {stats ? formatCurrency(stats.net_profit_this_month.value) : '$0'}
+                  {stats ? formatCurrency(stats.net_profit_this_month.value) : 'PKR 0'}
                 </CardTitle>
               )}
               <CardAction>
@@ -335,7 +335,7 @@ export default function OverViewLayout({
                 <Skeleton className='h-12 w-32 mt-2' />
               ) : (
                 <CardTitle className='text-4xl font-bold mt-2'>
-                  {stats ? formatCurrency(stats.cash_flow_this_month.value) : '$0'}
+                  {stats ? formatCurrency(stats.cash_flow_this_month.value) : 'PKR 0'}
                 </CardTitle>
               )}
               <CardAction>

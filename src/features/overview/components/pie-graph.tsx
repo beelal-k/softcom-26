@@ -106,7 +106,7 @@ export function PieGraph() {
             </defs>
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel formatter={(value) => `$${Number(value).toLocaleString()}`} className='border-accent bg-card' />}
+              content={<ChartTooltipContent hideLabel formatter={(value) => `PKR ${Number(value).toLocaleString()}`} className='border-accent bg-card' />}
             />
             <Pie
               data={chartData.map((item) => ({
@@ -134,7 +134,7 @@ export function PieGraph() {
                           y={viewBox.cy}
                           className='fill-foreground text-3xl font-bold'
                         >
-                          ${(totalAmount / 1000).toFixed(0)}k
+                          PKR {(totalAmount / 1000).toFixed(0)}k
                         </tspan>
                         <tspan
                           x={viewBox.cx}
