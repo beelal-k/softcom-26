@@ -1,6 +1,6 @@
 import { User, SafeUser } from './types';
 import connectDB from '@/lib/db/mongodb';
-import UserModel from './user-model';
+import UserModel, { IAuthUser } from './user-model';
 
 export const userStorage = {
   /**
@@ -9,7 +9,7 @@ export const userStorage = {
   async getAll(): Promise<User[]> {
     await connectDB();
     const users = await UserModel.find({}).lean();
-    return users as User[];
+    return users.map((u) => ({ ...u, id: u._id.toString() })) as User[];
   },
 
   /**
@@ -17,8 +17,9 @@ export const userStorage = {
    */
   async findById(id: string): Promise<User | null> {
     await connectDB();
-    const user = await UserModel.findOne({ id }).lean();
-    return user as User | null;
+    const user = await UserModel.findById(id).lean();
+    if (!user) return null;
+    return { ...user, id: user._id.toString() } as User;
   },
 
   /**
@@ -27,7 +28,8 @@ export const userStorage = {
   async findByEmail(email: string): Promise<User | null> {
     await connectDB();
     const user = await UserModel.findOne({ email }).lean();
-    return user as User | null;
+    if (!user) return null;
+    return { ...user, id: user._id.toString() } as User;
   },
 
   /**
@@ -36,16 +38,18 @@ export const userStorage = {
   async findByUsername(username: string): Promise<User | null> {
     await connectDB();
     const user = await UserModel.findOne({ username }).lean();
-    return user as User | null;
+    if (!user) return null;
+    return { ...user, id: user._id.toString() } as User;
   },
 
   /**
    * Create a new user
    */
-  async create(user: User): Promise<User> {
+  async create(user: Omit<User, 'id'>): Promise<User> {
     await connectDB();
     const newUser = await UserModel.create(user);
-    return newUser.toObject() as User;
+    const obj = newUser.toObject();
+    return { ...obj, id: obj._id.toString() } as User;
   },
 
   /**
@@ -53,12 +57,13 @@ export const userStorage = {
    */
   async update(id: string, updates: Partial<User>): Promise<User | null> {
     await connectDB();
-    const updatedUser = await UserModel.findOneAndUpdate(
-      { id },
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      id,
       { $set: updates },
       { new: true }
     ).lean();
-    return updatedUser as User | null;
+    if (!updatedUser) return null;
+    return { ...updatedUser, id: updatedUser._id.toString() } as User;
   },
 
   /**
@@ -66,8 +71,8 @@ export const userStorage = {
    */
   async delete(id: string): Promise<boolean> {
     await connectDB();
-    const result = await UserModel.deleteOne({ id });
-    return result.deletedCount > 0;
+    const result = await UserModel.findByIdAndDelete(id);
+    return !!result;
   },
 
   /**

@@ -1,14 +1,22 @@
-import mongoose, { Schema, Model } from 'mongoose';
-import { User } from './types';
+import mongoose, { Schema, Model, Document } from 'mongoose';
 
-// Define the User schema
-const userSchema = new Schema<User>(
+export interface IProfile {
+  avatar?: string;
+  bio?: string;
+}
+
+export interface IAuthUser extends Document {
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+  name?: string;
+  profile?: IProfile;
+  createdAt: Date;
+}
+
+const userSchema = new Schema<IAuthUser>(
   {
-    id: {
-      type: String,
-      required: true,
-      unique: true
-    },
     username: {
       type: String,
       required: true,
@@ -32,6 +40,20 @@ const userSchema = new Schema<User>(
       default: 'user',
       required: true
     },
+    name: {
+      type: String,
+      trim: true
+    },
+    profile: {
+      avatar: {
+        type: String,
+        default: ''
+      },
+      bio: {
+        type: String,
+        default: ''
+      }
+    },
     createdAt: {
       type: Date,
       default: Date.now
@@ -43,8 +65,9 @@ const userSchema = new Schema<User>(
   }
 );
 
-// Export the model
-const UserModel: Model<User> =
-  mongoose.models.User || mongoose.model<User>('User', userSchema);
+userSchema.index({ createdAt: -1 });
+
+const UserModel: Model<IAuthUser> =
+  mongoose.models.User || mongoose.model<IAuthUser>('User', userSchema);
 
 export default UserModel;
