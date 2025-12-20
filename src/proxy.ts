@@ -7,6 +7,28 @@ const publicRoutes = ['/auth/sign-in', '/auth/sign-up', '/auth/forgot-password',
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Check for user token in cookies
+  const userCookie = request.cookies.get('user');
+  let isAuthenticated = false;
+
+  // Verify authentication
+  if (userCookie) {
+    try {
+      const userData = JSON.parse(userCookie.value);
+      if (userData.id || userData._id) {
+        isAuthenticated = true;
+      }
+    } catch (error) {
+      // Invalid cookie
+      isAuthenticated = false;
+    }
+  }
+
+  // If user is authenticated and trying to access auth pages, redirect to dashboard
+  if (isAuthenticated && publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.redirect(new URL('/dashboard/overview', request.url));
+  }
+
   // Allow public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
@@ -17,31 +39,19 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for user token in cookies or localStorage (we'll check via header)
-  const userCookie = request.cookies.get('user');
-  const authHeader = request.headers.get('authorization');
-
-  // If accessing root, redirect to sign-in
+  // If accessing root, redirect based on authentication
   if (pathname === '/') {
+    if (isAuthenticated) {
+      return NextResponse.redirect(new URL('/dashboard/overview', request.url));
+    }
     return NextResponse.redirect(new URL('/auth/sign-in', request.url));
   }
 
   // If accessing dashboard routes without authentication
   if (pathname.startsWith('/dashboard')) {
-    // Check if user data exists in cookie
-    if (!userCookie) {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
       // Redirect to sign-in page
-      return NextResponse.redirect(new URL('/auth/sign-in', request.url));
-    }
-
-    try {
-      // Verify user cookie contains valid data
-      const userData = JSON.parse(userCookie.value);
-      if (!userData.id && !userData._id) {
-        throw new Error('Invalid user data');
-      }
-    } catch (error) {
-      // Invalid user data, redirect to sign-in
       return NextResponse.redirect(new URL('/auth/sign-in', request.url));
     }
   }

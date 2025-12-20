@@ -57,9 +57,17 @@ export default function SignInViewPage({ stars }: { stars: number }) {
     }
   };
 
+  // useEffect(() => {
+  //   const token = localStorage.getItem('token');
+  //   if (token) {
+  //     window.location.href = '/dashboard/overview';
+  //   }
+  // }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const user = localStorage.getItem('user');
+    if (token && user) {
       window.location.href = '/dashboard/overview';
     }
   }, []);
