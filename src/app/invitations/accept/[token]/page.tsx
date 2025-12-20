@@ -51,7 +51,7 @@ export default function AcceptInvitationPage({
           setMessage('Invitation accepted! Redirecting to dashboard...');
           // Clear any saved redirect
           localStorage.removeItem('redirect_after_login');
-          setTimeout(() => router.push('/dashboard/overview'), 2000);
+          setTimeout(() => router.push('/dashboard/overview'), 3000);
         } else {
           setStatus('error');
           setMessage(data.error || 'Failed to accept invitation');
@@ -71,9 +71,7 @@ export default function AcceptInvitationPage({
         {status === 'loading' && (
           <>
             <h1 className='text-2xl font-bold'>Processing Invitation...</h1>
-            <div className='flex justify-center'>
-              <div className='border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent' />
-            </div>
+            
           </>
         )}
       </div>
