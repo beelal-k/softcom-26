@@ -36,7 +36,8 @@ export default function SignInViewPage({ stars }: { stars: number }) {
         return;
       }
 
-      // Store user data (in production, use proper session management)
+      // Store token and user data
+      localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       // Set user cookie for middleware

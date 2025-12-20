@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown, GalleryVerticalEnd, Plus, User } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { apiClient } from '@/lib/api-client';
 
 import {
   DropdownMenu,
@@ -26,6 +27,17 @@ export function OrgSwitcher() {
   const router = useRouter();
   const { isMobile, state } = useSidebar();
   const [userData, setUserData] = useState<any>(null);
+  const [memberships, setMemberships] = useState<Array<{
+    id: string;
+    organization: {
+      id: string;
+      name: string;
+      imageUrl: string;
+      hasImage: boolean;
+    };
+    role: 'Owner' | 'Admin' | 'Manager' | 'Member';
+  }>>([]);
+  const [activeOrgId, setActiveOrgId] = useState<string | undefined>(undefined);
 
   // Get user data from localStorage
   useEffect(() => {
@@ -39,68 +51,44 @@ export function OrgSwitcher() {
     }
   }, []);
 
-  // ---------------------------
-  // DUMMY ORGANIZATIONS (Replace later)
-  // ---------------------------
-  // TODO: Replace with API call to fetch user's organizations and roles
-  // const response = await fetch('/api/organizations/user');
-  // const dummyMemberships = await response.json();
-  
-  const dummyMemberships: Array<{
-    id: string;
-    organization: {
-      id: string;
-      name: string;
-      imageUrl: string;
-      hasImage: boolean;
-    };
-    role: 'Owner' | 'Admin' | 'Manager' | 'Member';
-  }> = [
-    {
-      id: 'membership_1',
-      organization: {
-        id: 'org_1',
-        name: 'TechCorp Solutions',
-        imageUrl: '',
-        hasImage: false
-      },
-      role: 'Owner'
-    },
-    {
-      id: 'membership_2',
-      organization: {
-        id: 'org_2',
-        name: 'DesignHub Agency',
-        imageUrl: '',
-        hasImage: false
-      },
-      role: 'Admin'
-    },
-    {
-      id: 'membership_3',
-      organization: {
-        id: 'org_3',
-        name: 'DataFlow Analytics',
-        imageUrl: '',
-        hasImage: false
-      },
-      role: 'Member'
-    }
-  ];
+  // Fetch user's organizations from API
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      if (!userData) return;
 
-  // ---------------------------
-  // ACTIVE ORG HANDLING
-  // ---------------------------
-  const [activeOrgId, setActiveOrgId] = useState<string | undefined>(
-    dummyMemberships[0]?.organization.id
-  );
+      const userId = userData.id || userData._id;
+      const response = await apiClient.organizations.getAll(userId);
+
+      if (response.success && response.data) {
+        const orgs = response.data.map((org: any, index: number) => ({
+          id: `membership_${index}`,
+          organization: {
+            id: org._id || org.id,
+            name: org.name,
+            imageUrl: '',
+            hasImage: false
+          },
+          role: (org.owner === userId || org.owner?._id === userId) 
+            ? 'Owner' as const
+            : (org.userRole || 'Member') as 'Owner' | 'Admin' | 'Manager' | 'Member'
+        }));
+        
+        setMemberships(orgs);
+        if (orgs.length > 0 && !activeOrgId) {
+          setActiveOrgId(orgs[0].organization.id);
+        }
+      }
+    };
+
+    fetchOrganizations();
+  }, [userData]);
 
   const activeOrganization =
-    dummyMemberships.find((m) => m.organization.id === activeOrgId)
-      ?.organization || dummyMemberships[0]?.organization;
+    memberships.find((m) => m.organization.id === activeOrgId)
+      ?.organization || memberships[0]?.organization;
 
   // No organizations - show user name and "No organisation"
-  if (!dummyMemberships || dummyMemberships.length === 0) {
+  if (!memberships || memberships.length === 0) {
     const userName = userData?.username || userData?.fullName || 'User';
     console.log('No organizations found for user:', userName);
     
@@ -224,7 +212,7 @@ export function OrgSwitcher() {
               Organizations
             </DropdownMenuLabel>
 
-            {dummyMemberships.map((membership, index) => {
+            {memberships.map((membership, index) => {
               const org = membership.organization;
               const isActive = org.id === activeOrgId;
 

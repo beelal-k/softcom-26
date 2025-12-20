@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
@@ -41,7 +40,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -51,9 +50,8 @@ import { apiClient } from '@/lib/api-client';
 
 // Form schema for team member creation/editing
 const teamMemberSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['Owner', 'Admin', 'Manager', 'Member'], {
+  role: z.enum(['admin', 'manager', 'member'], {
     message: 'Please select a role'
   })
 });
@@ -64,30 +62,31 @@ interface TeamMember {
   id: string;
   name: string;
   email: string;
-  role: 'Owner' | 'Admin' | 'Manager' | 'Member';
+  role: string;
   joinedAt: string;
 }
 
-interface Organization {
+interface Team {
   id: string;
   name: string;
-  ownerId: string;
-  userRole: 'Owner' | 'Admin' | 'Manager' | 'Member';
+  description?: string;
 }
 
-export default function TeamPage() {
+export default function TeamMembersPage() {
   const router = useRouter();
-  const params = useSearchParams();
-  const orgId = params.get('org') ?? 'org_1';
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const orgId = searchParams.get('org');
+  const teamId = params.teamId as string;
 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [teamId, setTeamId] = useState<string | null>(null);
+  const [team, setTeam] = useState<Team | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   // Get current user
   useEffect(() => {
@@ -101,89 +100,80 @@ export default function TeamPage() {
     }
   }, []);
 
-  // Fetch organization and team members from API
+  // Fetch team and members from API
   useEffect(() => {
     const fetchData = async () => {
-      if (!currentUser || !orgId) return;
+      if (!currentUser || !teamId) return;
 
       try {
-        // Fetch organization details
-        const orgResponse = await apiClient.organizations.getById(orgId);
+        // Fetch team details
+        const teamResponse = await apiClient.teams.getById(teamId);
         
-        if (orgResponse.success && orgResponse.data) {
-          const orgData = orgResponse.data;
-          const currentUserId = currentUser?.id || currentUser?._id;
+        if (teamResponse.success && teamResponse.data) {
+          const teamData = teamResponse.data;
           
-          const org: Organization = {
-            id: orgData._id || orgData.id,
-            name: orgData.name,
-            ownerId: orgData.owner?._id || orgData.owner,
-            userRole: (orgData.owner === currentUserId || orgData.owner?._id === currentUserId) 
-              ? 'Owner' 
-              : (orgData.userRole || 'Member')
-          };
-          setOrganization(org);
+          setTeam({
+            id: teamData._id || teamData.id,
+            name: teamData.name,
+            description: teamData.description
+          });
 
-          // Fetch teams for this organization
-          const teamsResponse = await apiClient.teams.getByOrganization(orgId);
-          
-          if (teamsResponse.success && teamsResponse.data && teamsResponse.data.length > 0) {
-            // Get members from the first team (or combine all teams)
-            const team = teamsResponse.data[0];
-            setTeamId(team._id || team.id);
-            
-            if (team.members && Array.isArray(team.members)) {
-              const members: TeamMember[] = team.members.map((member: any) => ({
-                id: member.userId?._id || member.userId || member.id,
-                name: member.userId?.name || member.userId?.username || member.name || 'Unknown',
-                email: member.userId?.email || member.email || '',
-                role: member.role || 'Member',
-                joinedAt: member.joinedAt || new Date().toISOString()
-              }));
-              setTeamMembers(members);
+          // Check if user is owner (check organization owner)
+          if (orgId) {
+            const orgResponse = await apiClient.organizations.getById(orgId);
+            if (orgResponse.success && orgResponse.data) {
+              const currentUserId = currentUser?.id || currentUser?._id;
+              setIsOwner(
+                orgResponse.data.owner === currentUserId || 
+                orgResponse.data.owner?._id === currentUserId
+              );
             }
-          } else {
-            // No teams yet, empty members array
-            setTeamMembers([]);
+          }
+
+          // Get members from team data
+          if (teamData.members && Array.isArray(teamData.members)) {
+            const members: TeamMember[] = teamData.members.map((member: any) => ({
+              id: member.userId?._id || member.userId || member.id,
+              name: member.userId?.name || member.userId?.username || 'Unknown',
+              email: member.userId?.email || '',
+              role: member.role || 'member',
+              joinedAt: member.joinedAt || new Date().toISOString()
+            }));
+            setTeamMembers(members);
           }
         } else {
-          toast.error(orgResponse.error || 'Failed to fetch organization');
+          toast.error(teamResponse.error || 'Failed to fetch team');
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast.error('Failed to fetch organization data');
+        toast.error('Failed to fetch team data');
       }
     };
 
-    if (currentUser && orgId) {
+    if (currentUser && teamId) {
       fetchData();
     }
-  }, [currentUser, orgId]);
+  }, [currentUser, teamId, orgId]);
 
   const addForm = useForm<TeamMemberFormData>({
     resolver: zodResolver(teamMemberSchema),
     defaultValues: {
-      name: '',
       email: '',
-      role: 'Member'
+      role: 'member'
     }
   });
 
   const editForm = useForm<TeamMemberFormData>({
     resolver: zodResolver(teamMemberSchema),
     defaultValues: {
-      name: '',
       email: '',
-      role: 'Member'
+      role: 'member'
     }
   });
 
-  // Handle add team member
+  // Handle add team member (direct add + send email)
   const handleAdd = async (data: TeamMemberFormData) => {
-    if (!teamId) {
-      toast.error('No team found. Please create a team first.');
-      return;
-    }
+    if (!teamId || !orgId) return;
 
     try {
       // Search for user by email
@@ -197,16 +187,27 @@ export default function TeamPage() {
       const user = userResponse.data[0];
       const userId = user._id || user.id;
 
-      // Add member to team
-      const response = await apiClient.teams.addMember(teamId, {
-        userId,
-        role: data.role.toLowerCase()
-      });
+      // Call both APIs simultaneously
+      const [addResponse, inviteResponse] = await Promise.allSettled([
+        // 1. Add member to team directly
+        apiClient.teams.addMember(teamId, {
+          userId,
+          role: data.role
+        }),
+        // 2. Send email invitation/notification
+        apiClient.invitations.send({
+          email: data.email,
+          teamId,
+          organizationId: orgId,
+          role: data.role
+        })
+      ]);
 
-      if (response.success) {
+      // Check if add member was successful
+      if (addResponse.status === 'fulfilled' && addResponse.value.success) {
         const newMember: TeamMember = {
           id: userId,
-          name: user.name || user.username || data.name,
+          name: user.name || user.username || 'Unknown',
           email: user.email || data.email,
           role: data.role,
           joinedAt: new Date().toISOString()
@@ -215,9 +216,19 @@ export default function TeamPage() {
         setTeamMembers([...teamMembers, newMember]);
         setIsAddDialogOpen(false);
         addForm.reset();
-        toast.success(response.message || 'Team member added successfully');
+
+        // Show success message based on both results
+        if (inviteResponse.status === 'fulfilled' && inviteResponse.value.success) {
+          toast.success('Team member added and email notification sent!');
+        } else {
+          toast.success('Team member added successfully (email notification failed)');
+          console.warn('Email notification failed:', inviteResponse);
+        }
       } else {
-        toast.error(response.error || 'Failed to add team member');
+        const error = addResponse.status === 'fulfilled' 
+          ? addResponse.value.error 
+          : 'Failed to add team member';
+        toast.error(error || 'Failed to add team member');
       }
     } catch (error) {
       console.error('Error adding team member:', error);
@@ -232,7 +243,7 @@ export default function TeamPage() {
     try {
       const response = await apiClient.teams.updateMember(teamId, {
         userId: selectedMember.id,
-        role: data.role.toLowerCase()
+        role: data.role
       });
 
       if (response.success) {
@@ -281,52 +292,59 @@ export default function TeamPage() {
   const openEditDialog = (member: TeamMember) => {
     setSelectedMember(member);
     editForm.reset({
-      name: member.name,
       email: member.email,
-      role: member.role
+      role: member.role as 'admin' | 'manager' | 'member'
     });
     setIsEditDialogOpen(true);
   };
 
-  // Check if current user is owner
-  const isOwner = organization?.ownerId === (currentUser?.id || currentUser?._id);
-
   // Get role badge color
   const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'Owner':
+    switch (role.toLowerCase()) {
+      case 'admin':
         return 'bg-accent text-accent-foreground';
-      case 'Admin':
+      case 'manager':
         return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-      case 'Manager':
-        return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
       default:
         return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
+  if (!teamId || !orgId) {
+    return (
+      <PageContainer
+        pageTitle='Team Members'
+        pageDescription='Select a team first'
+      >
+        <div className='flex h-[400px] items-center justify-center'>
+          <div className='text-center'>
+            <p className='text-muted-foreground mb-4'>Please select a team from the Teams page</p>
+            <Button onClick={() => router.push(`/dashboard/workspaces/teams?org=${orgId}`)}>
+              Go to Teams
+            </Button>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
-      pageTitle='Team Management'
-      pageDescription='Manage your workspace team members and their roles'
+      pageTitle='Team Members'
+      pageDescription='Manage your team members and their roles'
     >
       {!isOwner && (
         <Alert className='mb-6 border-muted-foreground/20'>
           <Eye className='h-4 w-4' />
           <AlertDescription>
-            You have view-only access to this workspace. You can view team members but cannot add, edit, or remove them.
-            {organization?.userRole && (
-              <span className='ml-1 font-medium'>
-                Your role: {organization.userRole}
-              </span>
-            )}
+            You have view-only access to this team. You can view members but cannot add, edit, or remove them.
           </AlertDescription>
         </Alert>
       )}
 
       <div className='mb-6 flex items-center justify-between'>
         <div>
-          <h2 className='text-2xl font-bold'>{organization?.name}</h2>
+          <h2 className='text-2xl font-bold'>{team?.name}</h2>
           <p className='text-muted-foreground text-sm'>
             {teamMembers.length} team member{teamMembers.length !== 1 ? 's' : ''}
           </p>
@@ -360,7 +378,7 @@ export default function TeamPage() {
                   </div>
                 </div>
 
-                {isOwner && member.role !== 'Owner' && (
+                {isOwner && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant='ghost' size='icon' className='h-8 w-8'>
@@ -390,7 +408,7 @@ export default function TeamPage() {
             <CardContent>
               <div className='flex items-center justify-between'>
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getRoleBadgeColor(member.role)}`}
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getRoleBadgeColor(member.role)}`}
                 >
                   {member.role}
                 </span>
@@ -409,7 +427,7 @@ export default function TeamPage() {
           <DialogHeader>
             <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
-              Add a new member to your organization team
+              Add a registered user to your team and send them an email notification
             </DialogDescription>
           </DialogHeader>
           <Form
@@ -417,20 +435,6 @@ export default function TeamPage() {
             onSubmit={addForm.handleSubmit(handleAdd)}
             className='space-y-4'
           >
-            <FormField
-              control={addForm.control}
-              name='name'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder='John Doe' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={addForm.control}
               name='email'
@@ -465,9 +469,9 @@ export default function TeamPage() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value='Admin'>Admin</SelectItem>
-                      <SelectItem value='Manager'>Manager</SelectItem>
-                      <SelectItem value='Member'>Member</SelectItem>
+                      <SelectItem value='admin'>Admin</SelectItem>
+                      <SelectItem value='manager'>Manager</SelectItem>
+                      <SelectItem value='member'>Member</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -498,7 +502,7 @@ export default function TeamPage() {
           <DialogHeader>
             <DialogTitle>Edit Team Member</DialogTitle>
             <DialogDescription>
-              Update team member details and role
+              Update team member role
             </DialogDescription>
           </DialogHeader>
           <Form
@@ -508,29 +512,15 @@ export default function TeamPage() {
           >
             <FormField
               control={editForm.control}
-              name='name'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder='John Doe' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={editForm.control}
               name='email'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email Address *</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
                     <Input
                       type='email'
-                      placeholder='john@example.com'
                       {...field}
+                      disabled
                     />
                   </FormControl>
                   <FormMessage />
@@ -554,9 +544,9 @@ export default function TeamPage() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value='Admin'>Admin</SelectItem>
-                      <SelectItem value='Manager'>Manager</SelectItem>
-                      <SelectItem value='Member'>Member</SelectItem>
+                      <SelectItem value='admin'>Admin</SelectItem>
+                      <SelectItem value='manager'>Manager</SelectItem>
+                      <SelectItem value='member'>Member</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

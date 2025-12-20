@@ -46,9 +46,16 @@ export const invitationService = {
           inviterName: inviter.name || inviter.username || 'Someone',
           role: data.role
         });
+        console.log('✅ Invitation email sent successfully to:', data.email);
+      } else {
+        console.error('❌ Missing data for email:', { team: !!team, org: !!org, inviter: !!inviter });
       }
     } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError);
+      console.error('❌ Failed to send invitation email:', emailError);
+      console.error('Email error details:', {
+        message: emailError instanceof Error ? emailError.message : 'Unknown error',
+        stack: emailError instanceof Error ? emailError.stack : undefined
+      });
       // Continue even if email fails
     }
 

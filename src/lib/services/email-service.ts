@@ -20,22 +20,38 @@ export async function sendInvitationEmail(
     role: string;
   }
 ) {
-  const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invitations/accept/${data.token}`;
+  try {
+    console.log('📧 Attempting to send email to:', to);
+    console.log('📧 SMTP Config:', {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      user: process.env.SMTP_USER,
+      hasPassword: !!process.env.SMTP_PASS
+    });
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to,
-    subject: `You've been invited to join ${data.teamName}`,
-    html: `
-      <h2>Team Invitation</h2>
-      <p>Hi there!</p>
-      <p><strong>${data.inviterName}</strong> has invited you to join the team <strong>${data.teamName}</strong> in <strong>${data.organizationName}</strong> as a <strong>${data.role}</strong>.</p>
-      <p><a href="${acceptUrl}" style="background: #0070f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0;">Accept Invitation</a></p>
-      <p>Or copy this link: ${acceptUrl}</p>
-      <p>This invitation expires in 7 days.</p>
-      <hr>
-      <p style="color: #666; font-size: 12px;">If you didn't expect this invitation, you can ignore this email.</p>
-    `
-  });
+    const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invitations/accept/${data.token}`;
+
+    const info = await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to,
+      subject: `You've been invited to join ${data.teamName}`,
+      html: `
+        <h2>Team Invitation</h2>
+        <p>Hi there!</p>
+        <p><strong>${data.inviterName}</strong> has invited you to join the team <strong>${data.teamName}</strong> in <strong>${data.organizationName}</strong> as a <strong>${data.role}</strong>.</p>
+        <p><a href="${acceptUrl}" style="background: #0070f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0;">Accept Invitation</a></p>
+        <p>Or copy this link: ${acceptUrl}</p>
+        <p>This invitation expires in 7 days.</p>
+        <hr>
+        <p style="color: #666; font-size: 12px;">If you didn't expect this invitation, you can ignore this email.</p>
+      `
+    });
+
+    console.log('✅ Email sent successfully:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('❌ Email service error:', error);
+    throw error;
+  }
 }
 

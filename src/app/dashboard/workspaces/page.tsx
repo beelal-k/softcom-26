@@ -42,6 +42,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Building2, MoreVertical, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api-client';
 
 // Form schema for organization creation/editing
 const organizationSchema = z.object({
@@ -87,52 +88,31 @@ export default function WorkspacesPage() {
     }
   }, []);
 
-  // TODO: Replace with API call to fetch user's organizations
+  // Fetch user's organizations from API
   useEffect(() => {
-    // Mock API call - replace with actual API integration
     const fetchOrganizations = async () => {
-      // const response = await fetch('/api/organizations');
-      // const data = await response.json();
-      // setOrganizations(data);
+      if (!currentUser) return;
 
-      // Dummy data for testing - multiple organizations with different roles
-      const currentUserId = currentUser?.id || currentUser?._id || 'user_1';
-      const dummyOrgs: Organization[] = [
-        {
-          id: 'org_1',
-          name: 'TechCorp Solutions',
-          description: 'A leading technology company specializing in AI and cloud services',
-          industry: 'Technology',
-          size: '50-200',
-          website: 'https://techcorp.example.com',
-          ownerId: currentUserId,
-          createdAt: new Date().toISOString(),
-          userRole: 'Owner'
-        },
-        {
-          id: 'org_2',
-          name: 'DesignHub Agency',
-          description: 'Creative design agency focused on brand identity and digital experiences',
-          industry: 'Design',
-          size: '10-50',
-          website: 'https://designhub.example.com',
-          ownerId: 'user_other_1',
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          userRole: 'Admin'
-        },
-        {
-          id: 'org_3',
-          name: 'DataFlow Analytics',
-          description: 'Data analytics and business intelligence solutions provider',
-          industry: 'Analytics',
-          size: '200+',
-          website: 'https://dataflow.example.com',
-          ownerId: 'user_other_2',
-          createdAt: new Date(Date.now() - 172800000).toISOString(),
-          userRole: 'Member'
-        }
-      ];
-      setOrganizations(dummyOrgs);
+      const userId = currentUser.id || currentUser._id;
+      const response = await apiClient.organizations.getAll(userId);
+
+      if (response.success && response.data) {
+        // Map API response to match frontend interface
+        const orgs: Organization[] = response.data.map((org: any) => ({
+          id: org._id || org.id,
+          name: org.name,
+          description: org.description || '',
+          industry: org.industry || '',
+          size: org.size || '',
+          website: org.website || '',
+          ownerId: org.owner?._id || org.owner,
+          createdAt: org.createdAt,
+          userRole: (org.owner === userId || org.owner?._id === userId) ? 'Owner' : (org.userRole || 'Member')
+        }));
+        setOrganizations(orgs);
+      } else {
+        toast.error(response.error || 'Failed to fetch organizations');
+      }
     };
 
     if (currentUser) {
@@ -165,26 +145,28 @@ export default function WorkspacesPage() {
   // Handle create organization
   const handleCreate = async (data: OrganizationFormData) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/organizations', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(data)
-      // });
-      // const newOrg = await response.json();
+      const response = await apiClient.organizations.create(data);
 
-      const newOrg: Organization = {
-        id: `org_${Date.now()}`,
-        ...data,
-        ownerId: currentUser?.id || currentUser?._id || 'user_1',
-        createdAt: new Date().toISOString(),
-        userRole: 'Owner'
-      };
+      if (response.success && response.data) {
+        const newOrg: Organization = {
+          id: response.data._id || response.data.id,
+          name: response.data.name,
+          description: response.data.description || '',
+          industry: response.data.industry || '',
+          size: response.data.size || '',
+          website: response.data.website || '',
+          ownerId: response.data.owner?._id || response.data.owner,
+          createdAt: response.data.createdAt,
+          userRole: 'Owner'
+        };
 
-      setOrganizations([...organizations, newOrg]);
-      setIsCreateDialogOpen(false);
-      createForm.reset();
-      toast.success('Organization created successfully');
+        setOrganizations([...organizations, newOrg]);
+        setIsCreateDialogOpen(false);
+        createForm.reset();
+        toast.success(response.message || 'Organization created successfully');
+      } else {
+        toast.error(response.error || 'Failed to create organization');
+      }
     } catch (error) {
       console.error('Error creating organization:', error);
       toast.error('Failed to create organization');
@@ -196,23 +178,28 @@ export default function WorkspacesPage() {
     if (!selectedOrg) return;
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/organizations/${selectedOrg.id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(data)
-      // });
-      // const updatedOrg = await response.json();
+      const response = await apiClient.organizations.update(selectedOrg.id, data);
 
-      const updatedOrg = { ...selectedOrg, ...data };
+      if (response.success && response.data) {
+        const updatedOrg: Organization = {
+          ...selectedOrg,
+          name: response.data.name,
+          description: response.data.description || '',
+          industry: response.data.industry || '',
+          size: response.data.size || '',
+          website: response.data.website || ''
+        };
 
-      setOrganizations(
-        organizations.map((org) => (org.id === selectedOrg.id ? updatedOrg : org))
-      );
-      setIsEditDialogOpen(false);
-      setSelectedOrg(null);
-      editForm.reset();
-      toast.success('Organization updated successfully');
+        setOrganizations(
+          organizations.map((org) => (org.id === selectedOrg.id ? updatedOrg : org))
+        );
+        setIsEditDialogOpen(false);
+        setSelectedOrg(null);
+        editForm.reset();
+        toast.success(response.message || 'Organization updated successfully');
+      } else {
+        toast.error(response.error || 'Failed to update organization');
+      }
     } catch (error) {
       console.error('Error updating organization:', error);
       toast.error('Failed to update organization');
@@ -224,15 +211,16 @@ export default function WorkspacesPage() {
     if (!selectedOrg) return;
 
     try {
-      // TODO: Replace with actual API call
-      // await fetch(`/api/organizations/${selectedOrg.id}`, {
-      //   method: 'DELETE'
-      // });
+      const response = await apiClient.organizations.delete(selectedOrg.id);
 
-      setOrganizations(organizations.filter((org) => org.id !== selectedOrg.id));
-      setIsDeleteDialogOpen(false);
-      setSelectedOrg(null);
-      toast.success('Organization deleted successfully');
+      if (response.success) {
+        setOrganizations(organizations.filter((org) => org.id !== selectedOrg.id));
+        setIsDeleteDialogOpen(false);
+        setSelectedOrg(null);
+        toast.success(response.message || 'Organization deleted successfully');
+      } else {
+        toast.error(response.error || 'Failed to delete organization');
+      }
     } catch (error) {
       console.error('Error deleting organization:', error);
       toast.error('Failed to delete organization');
@@ -356,7 +344,7 @@ export default function WorkspacesPage() {
                 className='mt-4 w-full'
                 variant={isOwner(org) ? 'default' : 'outline'}
                 onClick={() =>
-                  router.push(`/dashboard/workspaces/team?org=${org.id}`)
+                  router.push(`/dashboard/workspaces/teams?org=${org.id}`)
                 }
               >
                 {isOwner(org) ? 'Manage Workspace' : 'View Workspace'}

@@ -49,7 +49,8 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
         return;
       }
 
-      // Store user data
+      // Store token and user data
+      localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       // Set user cookie for middleware

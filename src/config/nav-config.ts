@@ -58,10 +58,16 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Teams',
-    url: '/dashboard/workspaces/team',
+    url: '/dashboard/workspaces/teams',
     icon: 'teams',
     isActive: false,
-    items: [],
-    access: { requireOrg: true }
+    items: []
+  },
+  {
+    title: 'Members',
+    url: '/dashboard/workspaces/members',
+    icon: 'user',
+    isActive: false,
+    items: []
   }
 ];
