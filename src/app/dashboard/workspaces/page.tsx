@@ -49,7 +49,7 @@ const organizationSchema = z.object({
   name: z.string().min(2, 'Organization name must be at least 2 characters'),
   description: z.string().optional(),
   industry: z.string().optional(),
-  size: z.string().optional(),
+  company_size: z.string().optional(),
   website: z.string().url('Invalid URL').optional().or(z.literal(''))
 });
 
@@ -60,7 +60,7 @@ interface Organization {
   name: string;
   description?: string;
   industry?: string;
-  size?: string;
+  company_size?: string;
   website?: string;
   ownerId: string;
   createdAt: string;
@@ -114,7 +114,7 @@ export default function WorkspacesPage() {
               name: org.name,
               description: org.description || '',
               industry: org.industry || '',
-              size: org.size || '',
+              company_size: org.company_size || '',
               website: org.website || '',
               ownerId: org.owner?._id || org.owner,
               createdAt: org.createdAt,
@@ -136,7 +136,7 @@ export default function WorkspacesPage() {
                   name: org.name,
                   description: org.description || '',
                   industry: org.industry || '',
-                  size: org.size || '',
+                  company_size: org.company_size || '',
                   website: org.website || '',
                   ownerId: org.owner?._id || org.owner,
                   createdAt: org.createdAt,
@@ -166,7 +166,7 @@ export default function WorkspacesPage() {
       name: '',
       description: '',
       industry: '',
-      size: '',
+      company_size: '',
       website: ''
     }
   });
@@ -177,7 +177,7 @@ export default function WorkspacesPage() {
       name: '',
       description: '',
       industry: '',
-      size: '',
+      company_size: '',
       website: ''
     }
   });
@@ -193,7 +193,7 @@ export default function WorkspacesPage() {
           name: response.data.name,
           description: response.data.description || '',
           industry: response.data.industry || '',
-          size: response.data.size || '',
+          company_size: response.data.company_size || '',
           website: response.data.website || '',
           ownerId: response.data.owner?._id || response.data.owner,
           createdAt: response.data.createdAt,
@@ -226,7 +226,7 @@ export default function WorkspacesPage() {
           name: response.data.name,
           description: response.data.description || '',
           industry: response.data.industry || '',
-          size: response.data.size || '',
+          company_size: response.data.company_size || '',
           website: response.data.website || ''
         };
 
@@ -274,7 +274,7 @@ export default function WorkspacesPage() {
       name: org.name,
       description: org.description || '',
       industry: org.industry || '',
-      size: org.size || '',
+      company_size: org.company_size || '',
       website: org.website || ''
     });
     setIsEditDialogOpen(true);
@@ -361,9 +361,9 @@ export default function WorkspacesPage() {
                 {org.description || 'No description provided'}
               </CardDescription>
               <div className='flex flex-col gap-2 text-sm'>
-                {org.size && (
+                {org.company_size && (
                   <div className='text-muted-foreground'>
-                    <span className='font-medium'>Size:</span> {org.size} employees
+                    <span className='font-medium'>Size:</span> {org.company_size} employees
                   </div>
                 )}
                 {org.website && (
@@ -457,7 +457,7 @@ export default function WorkspacesPage() {
 
               <FormField
                 control={createForm.control}
-                name='size'
+                name='company_size'
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Company Size</FormLabel>
@@ -567,7 +567,7 @@ export default function WorkspacesPage() {
 
               <FormField
                 control={editForm.control}
-                name='size'
+                name='company_size'
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Company Size</FormLabel>
