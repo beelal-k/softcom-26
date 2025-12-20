@@ -10,11 +10,17 @@ export const organizationService = {
     name: string;
     description: string;
     owner: string;
+    industry: string;
+    company_size: string;
+    website: string;
   }): Promise<IOrganization> {
     await connectDB();
     const organization = await OrganizationModel.create({
       ...data,
-      owner: new mongoose.Types.ObjectId(data.owner)
+      owner: new mongoose.Types.ObjectId(data.owner),
+      industry: data.industry,
+      company_size: data.company_size,
+      website: data.website
     });
     return organization;
   },
@@ -75,12 +81,22 @@ export const organizationService = {
     data: Partial<{
       name: string;
       description: string;
+      industry: string;
+      company_size: string;
+      website: string;
     }>
   ): Promise<IOrganization | null> {
     await connectDB();
     const organization = await OrganizationModel.findByIdAndUpdate(
       id,
-      { $set: data },
+      {
+        $set: {
+          ...data,
+          industry: data.industry,
+          company_size: data.company_size,
+          website: data.website
+        } as any
+      },
       { new: true, runValidators: true }
     ).lean();
 
