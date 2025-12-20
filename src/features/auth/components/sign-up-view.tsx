@@ -62,8 +62,16 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
       // Set user cookie for middleware
       document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
 
+      // Check for pending invitation redirect
+      const redirectUrl = localStorage.getItem('redirect_after_login');
+      if (redirectUrl) {
+        localStorage.removeItem('redirect_after_login');
+        window.location.href = redirectUrl;
+        return;
+      }
+
       // Redirect to dashboard
-      window.location.href = '/dashboard/overview';
+      window.location.href = '/dashboard';
     } catch (err) {
       setError('An error occurred. Please try again.');
     } finally {

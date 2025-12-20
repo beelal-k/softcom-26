@@ -22,6 +22,8 @@ export async function POST(
       );
     }
 
+    console.log('isValid', isValid);
+
     const invitation = await invitationService.getByToken(token);
     if (!invitation) {
       return NextResponse.json(
@@ -29,6 +31,8 @@ export async function POST(
         { status: 404 }
       );
     }
+
+    console.log('invitation', invitation);
 
     const user = await userService.getById(userId);
     if (!user || user.email !== invitation.email) {
@@ -38,11 +42,15 @@ export async function POST(
       );
     }
 
+    console.log('user', user);
+
     const team = await teamService.addMember(invitation.teamId.toString(), {
       userId: userId,
       role: invitation.role,
       addedBy: invitation.invitedBy.toString()
     });
+
+    console.log('team', team);
 
     if (!team) {
       return NextResponse.json(
@@ -51,7 +59,11 @@ export async function POST(
       );
     }
 
+    console.log('accepting invitation');
+
     await invitationService.accept(token);
+
+    console.log('invitation accepted');
 
     return NextResponse.json(
       {
