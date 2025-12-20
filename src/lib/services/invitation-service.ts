@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { randomBytes } from 'crypto';
 import { sendInvitationEmail } from './email-service';
 import { teamService, organizationService, userService } from './index';
+import { ITeam } from '../models/team';
 
 export const invitationService = {
   /**
@@ -48,12 +49,17 @@ export const invitationService = {
         });
         console.log('✅ Invitation email sent successfully to:', data.email);
       } else {
-        console.error('❌ Missing data for email:', { team: !!team, org: !!org, inviter: !!inviter });
+        console.error('❌ Missing data for email:', {
+          team: !!team,
+          org: !!org,
+          inviter: !!inviter
+        });
       }
     } catch (emailError) {
       console.error('❌ Failed to send invitation email:', emailError);
       console.error('Email error details:', {
-        message: emailError instanceof Error ? emailError.message : 'Unknown error',
+        message:
+          emailError instanceof Error ? emailError.message : 'Unknown error',
         stack: emailError instanceof Error ? emailError.stack : undefined
       });
       // Continue even if email fails
@@ -113,8 +119,30 @@ export const invitationService = {
       { $set: { status: 'accepted' } },
       { new: true }
     ).lean();
+    // Add the invited user to the team upon accepting the invitation.
+    if (
+      invitation &&
+      invitation.teamId &&
+      invitation.email &&
+      invitation.role
+    ) {
+      // Find the user who was invited (by email)
+      const invitedUser = await userService.getByEmail(invitation.email);
+      if (invitedUser && invitedUser._id) {
+        await teamService.addMember(invitation.teamId.toString(), {
+          userId: invitedUser._id.toString(),
+          role: invitation.role,
+          addedBy: invitation.invitedBy?.toString() || ''
+        });
+      }
+    }
+
+<<<<<<< HEAD
     return invitation as IInvitation | null;
   },
+=======
+    return invitation as IInvitation | null;},
+>>>>>>> 73bf665310808abac9c184c416893c8f2acce6b8
 
   /**
    * Reject invitation

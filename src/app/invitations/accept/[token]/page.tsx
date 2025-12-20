@@ -28,6 +28,11 @@ export default function AcceptInvitationPage({
         if (!authToken) {
           setStatus('error');
           setMessage('Please login first to accept this invitation');
+          // Save the current URL to redirect back after login
+          localStorage.setItem(
+            'redirect_after_login',
+            `/invitations/accept/${token}`
+          );
           setTimeout(() => router.push('/auth/sign-in'), 2000);
           return;
         }
@@ -44,6 +49,8 @@ export default function AcceptInvitationPage({
         if (data.success) {
           setStatus('success');
           setMessage('Invitation accepted! Redirecting to dashboard...');
+          // Clear any saved redirect
+          localStorage.removeItem('redirect_after_login');
           setTimeout(() => router.push('/dashboard/overview'), 2000);
         } else {
           setStatus('error');
@@ -59,27 +66,27 @@ export default function AcceptInvitationPage({
   }, [token, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-4 rounded-lg border p-8 text-center">
+    <div className='flex min-h-screen items-center justify-center'>
+      <div className='w-full max-w-md space-y-4 rounded-lg border p-8 text-center'>
         {status === 'loading' && (
           <>
-            <h1 className="text-2xl font-bold">Processing Invitation...</h1>
-            <div className="flex justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <h1 className='text-2xl font-bold'>Processing Invitation...</h1>
+            <div className='flex justify-center'>
+              <div className='border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent' />
             </div>
           </>
         )}
 
         {status === 'success' && (
           <>
-            <h1 className="text-2xl font-bold text-green-600">Success!</h1>
+            <h1 className='text-2xl font-bold text-green-600'>Success!</h1>
             <p>{message}</p>
           </>
         )}
 
         {status === 'error' && (
           <>
-            <h1 className="text-2xl font-bold text-red-600">Error</h1>
+            <h1 className='text-2xl font-bold text-red-600'>Error</h1>
             <p>{message}</p>
           </>
         )}
@@ -87,4 +94,3 @@ export default function AcceptInvitationPage({
     </div>
   );
 }
-
