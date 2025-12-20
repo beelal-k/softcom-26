@@ -1,12 +1,18 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { InteractiveGridPattern } from './interactive-grid';
 
 export default function SignUpViewPage({ stars }: { stars: number }) {
@@ -35,10 +41,10 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           username: name,
-          email, 
-          password 
+          email,
+          password
         })
       });
 
@@ -52,12 +58,12 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
       // Store token and user data
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
+
       // Set user cookie for middleware
       document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
-      
+
       // Redirect to dashboard
-      window.location.href = '/dashboard';
+      window.location.href = '/dashboard/overview';
     } catch (err) {
       setError('An error occurred. Please try again.');
     } finally {
@@ -65,9 +71,16 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
     }
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      window.location.href = '/dashboard/overview';
+    }
+  }, []);
+
   return (
     <div className='relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>
-      <div className='bg-background relative hidden h-full flex-col p-10 text-foreground lg:flex dark:border-r border-border'>
+      <div className='bg-background text-foreground border-border relative hidden h-full flex-col p-10 lg:flex dark:border-r'>
         <div className='absolute inset-0 bg-black' />
         <div className='relative z-20 flex items-center text-lg font-medium'>
           <div className='flex items-center gap-2'>
@@ -97,10 +110,12 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
         <div className='relative z-20 mt-auto'>
           <blockquote className='space-y-2'>
             <p className='text-lg'>
-              &ldquo;Join thousands of professionals who trust our platform for their 
-              daily workflow and project management needs.&rdquo;
+              &ldquo;Join thousands of professionals who trust our platform for
+              their daily workflow and project management needs.&rdquo;
             </p>
-            <footer className='text-sm text-muted-foreground'>Michael Chen, Product Manager</footer>
+            <footer className='text-muted-foreground text-sm'>
+              Michael Chen, Product Manager
+            </footer>
           </blockquote>
         </div>
       </div>
@@ -108,7 +123,9 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
         <div className='w-full max-w-md space-y-6'>
           <Card>
             <CardHeader className='space-y-1'>
-              <CardTitle className='text-2xl font-bold'>Create Account</CardTitle>
+              <CardTitle className='text-2xl font-bold'>
+                Create Account
+              </CardTitle>
               <CardDescription>
                 Enter your information to get started
               </CardDescription>
@@ -116,7 +133,7 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
             <CardContent>
               <form onSubmit={handleSubmit} className='space-y-4'>
                 {error && (
-                  <div className='rounded-lg bg-destructive/10 p-3 text-sm text-destructive'>
+                  <div className='bg-destructive/10 text-destructive rounded-lg p-3 text-sm'>
                     {error}
                   </div>
                 )}
@@ -164,9 +181,9 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
                     required
                   />
                 </div>
-                <Button 
-                  type='submit' 
-                  className='w-full bg-accent text-accent-foreground hover:bg-accent/90'
+                <Button
+                  type='submit'
+                  className='bg-accent text-accent-foreground hover:bg-accent/90 w-full'
                   disabled={loading}
                 >
                   {loading ? 'Creating account...' : 'Create Account'}
@@ -174,7 +191,10 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
               </form>
               <div className='mt-6 text-center text-sm'>
                 Already have an account?{' '}
-                <Link href='/auth/sign-in' className='text-accent hover:underline font-medium'>
+                <Link
+                  href='/auth/sign-in'
+                  className='text-accent font-medium hover:underline'
+                >
                   Sign In
                 </Link>
               </div>
