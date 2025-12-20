@@ -44,7 +44,7 @@ export default function AcceptInvitationPage({
         if (data.success) {
           setStatus('success');
           setMessage('Invitation accepted! Redirecting to dashboard...');
-          setTimeout(() => router.push('/dashboard'), 2000);
+          setTimeout(() => router.push('/dashboard/overview'), 2000);
         } else {
           setStatus('error');
           setMessage(data.error || 'Failed to accept invitation');
