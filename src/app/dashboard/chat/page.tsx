@@ -20,7 +20,8 @@ import {
   disconnectSocket
 } from '@/lib/socket';
 import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload } from 'lucide-react';
-import { useEffect, useRef, useState, FormEvent, DragEvent, useMemo } from 'react';
+import { useEffect, useRef, useState, FormEvent, DragEvent, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AIChart } from '@/components/ui/ai-chart';
 
 interface ChatMessage {
@@ -33,6 +34,14 @@ interface ChatMessage {
 }
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChatContent />
+    </Suspense>
+  );
+}
+
+function ChatContent() {
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -43,6 +52,9 @@ export default function ChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+  const initialPrompt = searchParams.get('prompt');
+  const hasSentInitialPrompt = useRef(false);
   
   useEffect(() => {
     setMounted(true);
@@ -56,6 +68,20 @@ export default function ChatPage() {
         console.log('✅ Connected to AI server');
         setIsConnected(true);
         joinRoom(); // Join default user room
+
+        if (initialPrompt && !hasSentInitialPrompt.current) {
+            hasSentInitialPrompt.current = true;
+            // Add user message to UI
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'user',
+                content: initialPrompt
+            }]);
+            setIsLoading(true);
+            
+            // Send via socket
+            sendChatMessage(initialPrompt);
+        }
       });
 
       onDisconnect(() => {

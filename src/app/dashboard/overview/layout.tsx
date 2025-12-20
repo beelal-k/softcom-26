@@ -16,6 +16,9 @@ import { IconTrendingDown, IconTrendingUp, IconCheck, IconFileUpload, IconCloud 
 import React, { useEffect, useState } from 'react';
 import { RecentSales } from '@/features/overview/components/recent-sales';
 import { BarGraph } from '@/features/overview/components/bar-graph';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 
 interface DashboardStats {
   revenue_this_month: {
@@ -61,6 +64,27 @@ export default function OverViewLayout({
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const suggestedPrompts = [
+    {
+      title: "Generate a 90-day cash flow forecast",
+      prompt: "Generate a 90-day cash flow forecast based on my recent invoices and expenses."
+    },
+    {
+      title: "Breakdown my expenses for the last 6 months",
+      prompt: "Show me a breakdown of my expenses by category for the last 6 months."
+    },
+    {
+      title: "Analyze churn risk",
+      prompt: "Analyze my customer data and tell me which clients are at risk of churning."
+    },
+  ];
+
+  const handlePromptClick = (prompt: string) => {
+    // Navigate to chat with prompt as query param
+    router.push(`/dashboard/chat?prompt=${encodeURIComponent(prompt)}`);
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -157,6 +181,23 @@ export default function OverViewLayout({
               Monitor your financial performance and data integrations
             </p>
           </div>
+        </div>
+
+        {/* AI Insight Prompts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {suggestedPrompts.map((item, index) => (
+            <Button
+              key={index}
+              variant="outline"
+              className="h-auto py-4 px-4 flex flex-col rounded-2xl items-start gap-2 cursor-pointer border-accent/25 hover:border-accent hover:bg-accent/5 text-left whitespace-normal"
+              onClick={() => handlePromptClick(item.prompt)}
+            >
+              <div className="flex items-center text-sm gap-2 text-accent font-normal">
+                <Sparkles className="h-4 w-4" />
+                <span>{item.title}</span>
+              </div>
+            </Button>
+          ))}
         </div>
 
         {/* Financial KPI Cards */}
