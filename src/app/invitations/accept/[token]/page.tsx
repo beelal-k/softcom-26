@@ -76,20 +76,6 @@ export default function AcceptInvitationPage({
             </div>
           </>
         )}
-
-        {status === 'success' && (
-          <>
-            <h1 className='text-2xl font-bold text-green-600'>Success!</h1>
-            <p>{message}</p>
-          </>
-        )}
-
-        {status === 'error' && (
-          <>
-            <h1 className='text-2xl font-bold text-red-600'>Error</h1>
-            <p>{message}</p>
-          </>
-        )}
       </div>
     </div>
   );
