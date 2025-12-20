@@ -137,8 +137,7 @@ export const invitationService = {
       }
     }
 
-    return team as unknown as IInvitation;
-  },
+    return invitation as IInvitation | null;},
 
   /**
    * Reject invitation
