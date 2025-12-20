@@ -66,16 +66,36 @@ const chartConfig = {
   }
 } satisfies ChartConfig;
 
-export function BarGraph() {
+interface BarGraphProps {
+  chartData?: Array<{
+    date: string;
+    revenue: number;
+    expenses: number;
+  }>;
+  overall?: {
+    total_revenue: number;
+    total_expenses: number;
+  };
+}
+
+export function BarGraph({ chartData = [], overall }: BarGraphProps) {
   const [activeChart, setActiveChart] =
     React.useState<keyof typeof chartConfig>('revenue');
 
   const total = React.useMemo(
-    () => ({
-      revenue: chartData.reduce((acc, curr) => acc + curr.revenue, 0),
-      expenses: chartData.reduce((acc, curr) => acc + curr.expenses, 0)
-    }),
-    []
+    () => {
+      if (overall) {
+        return {
+          revenue: overall.total_revenue,
+          expenses: overall.total_expenses
+        };
+      }
+      return {
+        revenue: chartData.reduce((acc, curr) => acc + curr.revenue, 0),
+        expenses: chartData.reduce((acc, curr) => acc + curr.expenses, 0)
+      };
+    },
+    [chartData, overall]
   );
 
   const [isClient, setIsClient] = React.useState(false);
@@ -103,7 +123,8 @@ export function BarGraph() {
         <div className='flex'>
           {['revenue', 'expenses'].map((key) => {
             const chart = key as keyof typeof chartConfig;
-            if (!chart || total[key as keyof typeof total] === 0) return null;
+            // Always render buttons even if value is 0, unless specifically unwanted
+            if (!chart) return null;
             return (
               <button
                 key={chart}
@@ -115,7 +136,13 @@ export function BarGraph() {
                   {chartConfig[chart].label}
                 </span>
                 <span className='text-lg leading-none font-bold sm:text-3xl'>
-                  ${(total[key as keyof typeof total] / 1000).toFixed(1)}k
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 1,
+                    notation: 'compact'
+                  }).format(total[key as keyof typeof total])}
                 </span>
               </button>
             );
