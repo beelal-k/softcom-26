@@ -42,6 +42,10 @@ export function OrgSwitcher() {
   // ---------------------------
   // DUMMY ORGANIZATIONS (Replace later)
   // ---------------------------
+  // TODO: Replace with API call to fetch user's organizations and roles
+  // const response = await fetch('/api/organizations/user');
+  // const dummyMemberships = await response.json();
+  
   const dummyMemberships: Array<{
     id: string;
     organization: {
@@ -50,10 +54,38 @@ export function OrgSwitcher() {
       imageUrl: string;
       hasImage: boolean;
     };
-    role: string;
+    role: 'Owner' | 'Admin' | 'Manager' | 'Member';
   }> = [
-    // Empty array - change this to [] to test no organization state
-    // Or fetch from API based on userData
+    {
+      id: 'membership_1',
+      organization: {
+        id: 'org_1',
+        name: 'TechCorp Solutions',
+        imageUrl: '',
+        hasImage: false
+      },
+      role: 'Owner'
+    },
+    {
+      id: 'membership_2',
+      organization: {
+        id: 'org_2',
+        name: 'DesignHub Agency',
+        imageUrl: '',
+        hasImage: false
+      },
+      role: 'Admin'
+    },
+    {
+      id: 'membership_3',
+      organization: {
+        id: 'org_3',
+        name: 'DataFlow Analytics',
+        imageUrl: '',
+        hasImage: false
+      },
+      role: 'Member'
+    }
   ];
 
   // ---------------------------
@@ -216,7 +248,12 @@ export function OrgSwitcher() {
                     )}
                   </div>
 
-                  {org.name}
+                  <div className='flex flex-col items-start'>
+                    <span className='text-sm'>{org.name}</span>
+                    <span className='text-muted-foreground text-xs'>
+                      {membership.role}
+                    </span>
+                  </div>
 
                   {isActive ? (
                     <Check className='ml-auto size-4' />
