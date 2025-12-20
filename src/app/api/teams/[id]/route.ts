@@ -23,8 +23,12 @@ export async function GET(
       );
     }
 
+    // Check if user is a team member or organization owner
     const isMember = await isTeamMember(userId, id);
-    if (!isMember) {
+    const canManage = await canManageTeam(userId, id);
+    
+    // If not a member and can't manage (not org owner), return limited info
+    if (!isMember && !canManage) {
       return NextResponse.json(
         {
           success: true,

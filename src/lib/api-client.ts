@@ -132,8 +132,12 @@ export const apiClient = {
 
   // Teams
   teams: {
-    getByOrganization: (organizationId: string) => {
-      return apiRequest(`/api/teams?organizationId=${organizationId}`);
+    getByOrganization: (organizationId?: string) => {
+      if (organizationId) {
+        return apiRequest(`/api/teams?organizationId=${organizationId}`);
+      }
+      // If no organizationId, get all teams for the current user
+      return apiRequest('/api/teams');
     },
     
     getById: (id: string) => {

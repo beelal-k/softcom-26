@@ -108,7 +108,6 @@ export default function TeamMembersPage() {
       try {
         // Fetch team details
         const teamResponse = await apiClient.teams.getById(teamId);
-        
         if (teamResponse.success && teamResponse.data) {
           const teamData = teamResponse.data;
           
@@ -132,14 +131,43 @@ export default function TeamMembersPage() {
 
           // Get members from team data
           if (teamData.members && Array.isArray(teamData.members)) {
-            const members: TeamMember[] = teamData.members.map((member: any) => ({
-              id: member.userId?._id || member.userId || member.id,
-              name: member.userId?.name || member.userId?.username || 'Unknown',
-              email: member.userId?.email || '',
-              role: member.role || 'member',
-              joinedAt: member.joinedAt || new Date().toISOString()
-            }));
-            setTeamMembers(members);
+            console.log('✅ Found members array:', teamData.members.length);
+            
+            // Fetch full user details for each member
+            const membersWithDetails = await Promise.all(
+              teamData.members.map(async (member: any) => {
+                console.log('👤 Processing member:', member);
+                
+                const userId = member.userId?._id || member.userId;
+                let name = member.userId?.name || member.userId?.username || member.name;
+                const email = member.userId?.email || member.email || '';
+                
+                // If name is not available, fetch user details
+                if (!name && userId) {
+                  try {
+                    const userResponse = await apiClient.users.getById(userId);
+                    if (userResponse.success && userResponse.data) {
+                      name = userResponse.data.name || userResponse.data.username || email.split('@')[0];
+                    }
+                  } catch (error) {
+                    console.warn('Failed to fetch user details for:', userId);
+                  }
+                }
+                
+                return {
+                  id: userId,
+                  name: name || email.split('@')[0] || 'Unknown',
+                  email: email,
+                  role: member.role || 'member',
+                  joinedAt: member.addedAt || member.joinedAt || new Date().toISOString()
+                };
+              })
+            );
+            
+            console.log('✅ Processed members with details:', membersWithDetails);
+            setTeamMembers(membersWithDetails);
+          } else {
+            console.warn('❌ No members array found or not an array');
           }
         } else {
           toast.error(teamResponse.error || 'Failed to fetch team');

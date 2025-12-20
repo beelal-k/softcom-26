@@ -93,25 +93,65 @@ export default function WorkspacesPage() {
     const fetchOrganizations = async () => {
       if (!currentUser) return;
 
-      const userId = currentUser.id || currentUser._id;
-      const response = await apiClient.organizations.getAll(userId);
+      try {
+        const userId = currentUser.id || currentUser._id;
+        
+        // Fetch organizations where user is owner
+        const orgsResponse = await apiClient.organizations.getAll(userId);
+        
+        // Fetch teams where user is a member (to get organizations they're part of)
+        const teamsResponse = await apiClient.teams.getByOrganization('');
+        
+        let allOrganizations: Organization[] = [];
+        const orgMap = new Map<string, Organization>();
 
-      if (response.success && response.data) {
-        // Map API response to match frontend interface
-        const orgs: Organization[] = response.data.map((org: any) => ({
-          id: org._id || org.id,
-          name: org.name,
-          description: org.description || '',
-          industry: org.industry || '',
-          size: org.size || '',
-          website: org.website || '',
-          ownerId: org.owner?._id || org.owner,
-          createdAt: org.createdAt,
-          userRole: (org.owner === userId || org.owner?._id === userId) ? 'Owner' : (org.userRole || 'Member')
-        }));
-        setOrganizations(orgs);
-      } else {
-        toast.error(response.error || 'Failed to fetch organizations');
+        // Add owned organizations
+        if (orgsResponse.success && orgsResponse.data) {
+          orgsResponse.data.forEach((org: any) => {
+            const orgId = org._id || org.id;
+            orgMap.set(orgId, {
+              id: orgId,
+              name: org.name,
+              description: org.description || '',
+              industry: org.industry || '',
+              size: org.size || '',
+              website: org.website || '',
+              ownerId: org.owner?._id || org.owner,
+              createdAt: org.createdAt,
+              userRole: 'Owner'
+            });
+          });
+        }
+
+        // Add organizations from teams where user is a member
+        if (teamsResponse.success && teamsResponse.data) {
+          teamsResponse.data.forEach((team: any) => {
+            const org = team.organizationId;
+            if (org && typeof org === 'object') {
+              const orgId = org._id || org.id;
+              // Only add if not already in map (owner takes precedence)
+              if (!orgMap.has(orgId)) {
+                orgMap.set(orgId, {
+                  id: orgId,
+                  name: org.name,
+                  description: org.description || '',
+                  industry: org.industry || '',
+                  size: org.size || '',
+                  website: org.website || '',
+                  ownerId: org.owner?._id || org.owner,
+                  createdAt: org.createdAt,
+                  userRole: 'Member'
+                });
+              }
+            }
+          });
+        }
+
+        allOrganizations = Array.from(orgMap.values());
+        setOrganizations(allOrganizations);
+      } catch (error) {
+        console.error('Error fetching organizations:', error);
+        toast.error('Failed to fetch organizations');
       }
     };
 

@@ -137,8 +137,12 @@ export const invitationService = {
       }
     }
 
+<<<<<<< HEAD
     return invitation as IInvitation | null;
   },
+=======
+    return invitation as IInvitation | null;},
+>>>>>>> 73bf665310808abac9c184c416893c8f2acce6b8
 
   /**
    * Reject invitation
