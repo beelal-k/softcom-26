@@ -53,7 +53,7 @@ import { apiClient } from '@/lib/api-client';
 const teamMemberSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['Owner', 'Admin', 'Manager', 'Member'], {
+  role: z.enum(['Owner', 'Manager', 'Member'], {
     message: 'Please select a role'
   })
 });
@@ -64,7 +64,7 @@ interface TeamMember {
   id: string;
   name: string;
   email: string;
-  role: 'Owner' | 'Admin' | 'Manager' | 'Member';
+  role: 'Owner' | 'Manager' | 'Member';
   joinedAt: string;
 }
 
@@ -72,7 +72,7 @@ interface Organization {
   id: string;
   name: string;
   ownerId: string;
-  userRole: 'Owner' | 'Admin' | 'Manager' | 'Member';
+  userRole: 'Owner' | 'Manager' | 'Member';
 }
 
 export default function TeamPage() {
@@ -296,8 +296,6 @@ export default function TeamPage() {
     switch (role) {
       case 'Owner':
         return 'bg-accent text-accent-foreground';
-      case 'Admin':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
       case 'Manager':
         return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
       default:
@@ -465,7 +463,6 @@ export default function TeamPage() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value='Admin'>Admin</SelectItem>
                       <SelectItem value='Manager'>Manager</SelectItem>
                       <SelectItem value='Member'>Member</SelectItem>
                     </SelectContent>
@@ -554,7 +551,6 @@ export default function TeamPage() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value='Admin'>Admin</SelectItem>
                       <SelectItem value='Manager'>Manager</SelectItem>
                       <SelectItem value='Member'>Member</SelectItem>
                     </SelectContent>
