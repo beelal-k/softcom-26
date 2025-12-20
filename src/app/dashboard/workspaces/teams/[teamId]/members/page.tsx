@@ -132,40 +132,18 @@ export default function TeamMembersPage() {
           // Get members from team data
           if (teamData.members && Array.isArray(teamData.members)) {
             console.log('✅ Found members array:', teamData.members.length);
-            
-            // Fetch full user details for each member
-            const membersWithDetails = await Promise.all(
-              teamData.members.map(async (member: any) => {
-                console.log('👤 Processing member:', member);
-                
-                const userId = member.userId?._id || member.userId;
-                let name = member.userId?.name || member.userId?.username || member.name;
-                const email = member.userId?.email || member.email || '';
-                
-                // If name is not available, fetch user details
-                if (!name && userId) {
-                  try {
-                    const userResponse = await apiClient.users.getById(userId);
-                    if (userResponse.success && userResponse.data) {
-                      name = userResponse.data.name || userResponse.data.username || email.split('@')[0];
-                    }
-                  } catch (error) {
-                    console.warn('Failed to fetch user details for:', userId);
-                  }
-                }
-                
-                return {
-                  id: userId,
-                  name: name || email.split('@')[0] || 'Unknown',
-                  email: email,
-                  role: member.role || 'member',
-                  joinedAt: member.addedAt || member.joinedAt || new Date().toISOString()
-                };
-              })
-            );
-            
-            console.log('✅ Processed members with details:', membersWithDetails);
-            setTeamMembers(membersWithDetails);
+            const members: TeamMember[] = teamData.members.map((member: any) => {
+              console.log('👤 Processing member:', member);
+              return {
+                id: member.userId?._id || member.userId || member.id || member._id,
+                name: member.userId?.name || member.userId?.username || member.name || 'Unknown',
+                email: member.userId?.email || member.email || '',
+                role: member.role || 'member',
+                joinedAt: member.joinedAt || new Date().toISOString()
+              };
+            });
+            console.log('✅ Processed members:', members);
+            setTeamMembers(members);
           } else {
             console.warn('❌ No members array found or not an array');
           }
@@ -218,8 +196,10 @@ export default function TeamMembersPage() {
       // Call both APIs simultaneously
       const [addResponse, inviteResponse] = await Promise.allSettled([
         // 1. Add member to team directly
-        apiClient.teams.addMember(teamId, {
-          userId,
+        apiClient.teams.addMember( {
+          teamId,
+          organizationId: orgId,
+          email: data.email,
           role: data.role
         }),
         // 2. Send email invitation/notification
