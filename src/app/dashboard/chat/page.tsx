@@ -19,10 +19,16 @@ import {
   onConnectionError,
   disconnectSocket
 } from '@/lib/socket';
-import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload } from 'lucide-react';
+import { Bot, Send, Sparkles, User, Zap, Lightbulb, FileText, MessageSquare, Paperclip, X, Upload, Cloud } from 'lucide-react';
 import { useEffect, useRef, useState, FormEvent, DragEvent, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AIChart } from '@/components/ui/ai-chart';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 interface ChatMessage {
   id: string;
@@ -380,20 +386,58 @@ X
               className='hidden'
               accept='image/*,.pdf,.csv,.xlsx,.xls'
             />
-            <Button
-              type='button'
-              size='icon'
-              variant='ghost'
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading || isLoading}
-              className='absolute left-2 top-1 h-10 w-10 text-muted-foreground hover:text-foreground'
-            >
-              {isUploading ? (
-                <div className='h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin' />
-              ) : (
-                <Paperclip className='h-4 w-4' />
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type='button'
+                  size='icon'
+                  variant='ghost'
+                  disabled={isUploading || isLoading}
+                  className='absolute left-2 top-1 h-10 w-10 text-muted-foreground hover:text-foreground'
+                >
+                  {isUploading ? (
+                    <div className='h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin' />
+                  ) : (
+                    <Paperclip className='h-4 w-4' />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  <span>Upload File</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => {
+                  try {
+                    const userStr = localStorage.getItem('user');
+                    let userEmail = '';
+                    if (userStr) {
+                       const user = JSON.parse(userStr);
+                       userEmail = user.email;
+                    }
+                    
+                    if (!userEmail) {
+                        alert('User email not found. Please log in again.');
+                        return;
+                    }
+
+                    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                    const response = await fetch(`${API_URL}/google/login?email=${encodeURIComponent(userEmail)}`);
+                    const data = await response.json();
+                    
+                    if (data.url) {
+                        window.location.href = data.url;
+                    }
+                  } catch (e) {
+                    console.error('Failed to initiate Google Drive connection:', e);
+                    alert('Failed to connect to Google Drive. Please try again.');
+                  }
+                }}>
+                  <Cloud className="mr-2 h-4 w-4" />
+                  <span>Connect Google Drive</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
